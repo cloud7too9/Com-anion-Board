@@ -1,0 +1,26 @@
+# systemd-Dienst für die API des Boards auf dem Raspberry Pi (Umbau Phase 6).
+# Einrichten: siehe ANLEITUNG.md. Einstellungen stehen in /etc/companion-board.env.
+[Unit]
+Description=Companion Board API (Fastify + SQLite)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=board
+Group=board
+WorkingDirectory=/opt/companion-board/koordinaten-board/server
+EnvironmentFile=/etc/companion-board.env
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning src/server.js
+Restart=always
+RestartSec=3
+# Leitplanke für den RAM (1-GB-Pi): ein Ausreißer legt nicht den ganzen Pi lahm
+MemoryMax=400M
+# Nur der Datenordner ist beschreibbar
+ProtectSystem=strict
+ReadWritePaths=/var/lib/companion-board
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

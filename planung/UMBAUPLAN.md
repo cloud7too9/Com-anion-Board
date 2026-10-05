@@ -129,9 +129,9 @@ Git: Push löst bei Netlify einen Vorschau-Build für den PR aus, dort testen, d
 
 ### Phase 6: Pi, Tunnel, Domain
 
-- [ ] Repo auf dem Pi klonen, nur `koordinaten-board/server` installieren, als systemd-Dienst starten
-- [ ] `cloudflared` installieren, benannten Tunnel anlegen, `api.deinedomain.de` zuordnen, ebenfalls als Dienst
-- [ ] Domain auf Cloudflare-DNS umstellen und Netlify zuordnen (Abschnitt „Eine Domain, drei Adressen“)
+- [ ] Repo auf dem Pi klonen, nur `koordinaten-board/server` installieren, als systemd-Dienst starten *(vorbereitet: `koordinaten-board/pi/companion-board.service`, `companion-board.env`, `sicherung.sh`, Befehle in `pi/ANLEITUNG.md`; ausführen muss Max am Pi)*
+- [ ] `cloudflared` installieren, benannten Tunnel anlegen, `api.deinedomain.de` zuordnen, ebenfalls als Dienst *(vorbereitet: `pi/cloudflared-config.yml`, Befehle in `pi/ANLEITUNG.md`)*
+- [ ] Domain auf Cloudflare-DNS umstellen und Netlify zuordnen (Abschnitt „Eine Domain, drei Adressen“) *(Schritte in `pi/ANLEITUNG.md`, Abschnitt 3)*
 - [ ] Probe über Mobilfunk statt WLAN: QR scannen, beitreten, Ort anlegen, Board aktualisiert sich
 - [ ] Aufräumen: `netzwerk.js`, Adress-Lernen und Firewall-Skripte werden für den Pi nicht mehr gebraucht
 
@@ -162,10 +162,10 @@ Auf dem Pi bleiben genau zwei Dienste: die API (Fastify mit WebSocket, dazu SQLi
 
 Fünf Fragen musst du klären, bevor Phase 5 und 6 starten können.
 
-- [ ] Welche Domain, und lässt der Registrar das Umstellen der Nameserver zu?
-- [ ] Welches Gerät zeigt das Board an (TV-Browser, Tablet, Laptop)? Der Pi fällt aus, Raspberry OS Lite hat keinen Desktop.
-- [ ] Startseite der Domain: heutige Anzeige oder gleich das Widget-Dashboard, das sie später ersetzen soll?
-- [ ] Kommt nach `/app/` der Prototyp oder deine eigene `modul-a-live-karte.html`, die nicht im Repo liegt?
+- [ ] Welche Domain, und lässt der Registrar das Umstellen der Nameserver zu? *(Max)*
+- [ ] Welches Gerät zeigt das Board an (TV-Browser, Tablet, Laptop)? Der Pi fällt aus, Raspberry OS Lite hat keinen Desktop. *(Max; technisch egal, jedes Gerät mit Browser und Anzeige-Link)*
+- [ ] Startseite der Domain: heutige Anzeige oder gleich das Widget-Dashboard, das sie später ersetzen soll? *(Max; gebaut ist: `/` = Anzeige, `/dashboard/` = Dashboard. Soll das Dashboard auf `/`, reicht eine Zeile in `netlify/_redirects`.)*
+- [ ] Kommt nach `/app/` der Prototyp oder deine eigene `modul-a-live-karte.html`, die nicht im Repo liegt? *(Max; gebaut ist der Prototyp. Die eigene Datei müsste ins Repo und in `netlify/bauen.sh` statt `companion-prototyp.html` kopiert werden.)*
 - [x] Welche Node-Version läuft auf dem Pi (`node -v`)? Ab 22.13 reicht `node:sqlite`. *(Entfällt: Der Pi bekommt laut Anleitung Node 22 LTS von NodeSource, `package.json` verlangt `>=22.13`.)*
 
 | Risiko | Folge | Gegenmittel |

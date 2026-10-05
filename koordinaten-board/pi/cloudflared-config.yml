@@ -1,0 +1,8 @@
+# Benannter Cloudflare Tunnel für die API (Umbau Phase 6): /etc/cloudflared/config.yml
+# <TUNNEL-ID> und deinedomain.de ersetzen; die Datei mit den Zugangsdaten legt `cloudflared tunnel create` an.
+tunnel: <TUNNEL-ID>
+credentials-file: /etc/cloudflared/<TUNNEL-ID>.json
+ingress:
+  - hostname: api.deinedomain.de
+    service: http://127.0.0.1:3000
+  - service: http_status:404

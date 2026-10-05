@@ -15,9 +15,9 @@
   - aus Strang B die Phasen **B1** (Datenmodell) und **B2** (Accounts mit PIN)
   - **CI auf GitHub:** Bei jedem PR und jedem Push auf `main` laufen alle Tests (Kapitel 6)
   - **Nur Bedrock (E15):** Java gibt es nirgendwo mehr, auch nicht bei den Portalen
-- **Umbau Netlify + Pi (`UMBAUPLAN.md`), Phase 1 „Server absichern“ gebaut** (05.10.2026, Branch `claude/vibrant-mccarthy-qzhzq4`, noch nicht gemergt): Anzeige nur mit Anzeige-Link (auch am Board-Gerät, Link in `daten/anzeige-link.txt`), `HOST`, `CF-Connecting-IP`, CORS mit `ERLAUBTE_URSPRUENGE`, Board-PIN mit 6 Ziffern. **Für Max:** Nach dem Merge bekommt das Board eine neue 6-stellige PIN (QR-Code neu scannen), und der Kiosk öffnet die Anzeige über den Link aus `server/daten/anzeige-link.txt` (`start.bat`/`start.sh` angepasst).
+- **Umbau Netlify + Pi (`UMBAUPLAN.md`), Phasen 1–5 gebaut** (05.10.2026): Server abgesichert (Anzeige nur mit Link, `HOST`, `CF-Connecting-IP`, CORS, 6-stellige PIN), API-Adresse konfigurierbar (`konfig.js`, `VITE_API_URL`), Texterkennung am Handy (`texterkennung.js`, tesseract.js im Browser), SQLite (`daten.db`, `speicher.js`), Netlify-Build mit PWA (`netlify.toml`, `sw.js`). **Für Max:** neue 6-stellige PIN (QR-Code neu scannen); der Kiosk öffnet die Anzeige über `server/daten/anzeige-link.txt`; der Server braucht Node 22.13+; `daten.json` wird beim ersten Start nach `daten.db` übernommen.
 - **Als Nächstes** (Kapitel 9):
-  0. **Umbau Phase 2** „API-Adresse konfigurierbar“ (`UMBAUPLAN.md`)
+  0. **Umbau:** Phasen 1–5 sind gebaut (PRs #1–#5). Phase 5 wartet auf die Probe bei Netlify, Phase 6 auf Pi, Cloudflare und Domain: alles, was Max tun muss, steht in `koordinaten-board/pi/ANLEITUNG.md`. Offen im Code: nach der Probe `netzwerk.js`, Adress-Lernen und Firewall-Skripte für den Pi aufräumen (Phase 6, letzter Punkt).
   1. **Bauplan „Sitzung“** (E16) schreiben und mit Max abnicken
   2. **Offline B3–B5** mit HTTPS am Board (N5 ist entschieden: eigenes Zertifikat)
   3. A7 (Größenstufen je Widget): Planungsrunde mit Max
