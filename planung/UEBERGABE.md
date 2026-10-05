@@ -142,7 +142,7 @@ npm start                                              # Windows: start.bat (bau
 
 | Teil | Befehl | Ergebnis |
 |---|---|---|
-| Board-Server | `cd koordinaten-board && npm test` | 60 Tests (seit Umbau Phase 1: CORS, Client-IP hinter dem Tunnel, Board-PIN) |
+| Board-Server | `cd koordinaten-board && npm test` | 58 Tests (seit Umbau Phase 1: CORS, Client-IP hinter dem Tunnel, Board-PIN; seit Phase 3 ohne OCR) |
 | Widgets | `cd companion/widgets && npm run typecheck && npm test` | Typecheck ok, 108 Unit-Tests |
 | Companion und Dashboard (Playwright) | `cd companion/tests && npm test` | 16 Dateien (seit Umbau Phase 2 auch `getrennt`), dazu 20 Dekoder-Tests |
 

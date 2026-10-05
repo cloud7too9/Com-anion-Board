@@ -8,7 +8,7 @@ Eine HTML-Datei, Vanilla JS, gleiche Shell und Basis-CSS wie `modul-a-live-karte
 
 **Ausprobieren:** `companion-prototyp.html` direkt öffnen (am Handy oder Desktop) – dann läuft der DEMO-Mock mit Beispielwelt. **Live** läuft die Companion, wenn das Koordinaten-Board sie ausliefert: Board starten, `http://<board>:3000/?pin=<PIN>` öffnen oder den QR-Code der Anzeige mit der Kamera-App scannen (siehe „Live-Betrieb“). Mit `?modul=sammelobjekte`, `?modul=portale`, `?modul=banner` oder `?modul=ruestung` startet man direkt im jeweiligen Bereich, `?demo=1` erzwingt den Mock.
 
-Neben der Seite gehören `konfig.js` (Adresse des Boards, leer = der Server, der die Seite ausliefert; Umbau Phase 2), `regeln.js` (Stammdaten und Regeln, die auch der Board-Server lädt), `board-karten.js` (Anzeigeschemas, lädt der Board-Server ebenfalls), `icons/` (Kennblöcke) und `ruestungs-baukasten/` (Bedrock-Texturen für Rüstung und Sammelobjekte) in denselben Ordner.
+Neben der Seite gehören `konfig.js` (Adresse des Boards, leer = der Server, der die Seite ausliefert; Umbau Phase 2), `texterkennung.js` (Auswertung und OCR der Screenshots, Umbau Phase 3; tesseract.js in `vendor/tesseract/`), `regeln.js` (Stammdaten und Regeln, die auch der Board-Server lädt), `board-karten.js` (Anzeigeschemas, lädt der Board-Server ebenfalls), `icons/` (Kennblöcke) und `ruestungs-baukasten/` (Bedrock-Texturen für Rüstung und Sammelobjekte) in denselben Ordner.
 
 ## Was drin ist
 
@@ -158,7 +158,7 @@ Seit der Zusammenführung (Entscheidung von Max, 29.09.2026) ist das **Koordinat
 - **API**: dieselben Pfade wie im API-Vertrag, mit Präfix `/api` (Umsetzung `koordinaten-board/server/src/companion-api.js` + `daten.js`). Der Server prüft mit **derselben Datei `regeln.js`**, die die Seite lädt.
 - **Live-Updates**: Nach jeder Änderung meldet das Board `{ art:"geaendert", bereich, weltId }`. `liveAktualisieren()` lädt nur den betroffenen Bereich neu (Orte ohne Ansicht, Filter oder Kartenausschnitt zu verändern).
 - **Leeres Board**: Nach dem ersten Beitreten öffnet sich „Welt“, um die erste Welt mit Seed anzulegen.
-- **Screenshot**: `/api/orte/auslesen` nutzt die Texterkennung des Boards.
+- **Screenshot**: Die Texterkennung läuft seit Umbau Phase 3 am Handy selbst (`texterkennung.js`, tesseract.js aus `vendor/tesseract/`, beim ersten Mal etwa 7 MB; Geräte ohne WebAssembly-SIMD holen den Kern vom CDN). Im DEMO-Modus antwortet der Mock.
 - **Anzeige im Zimmer** (Board-Sheet, nur live): Welt auf der Anzeige (aktive Welt, gilt für das Board – die eigene Welt am Handy bleibt davon unberührt), Titel, QR-Code zeigen. Im Ort-Detail „Auf der Anzeige anheften“ (groß oben auf der Anzeige).
 
 ## Board-Verbindung
@@ -231,7 +231,7 @@ karte = { titel, unter?, bereich?, quelle?, typ?, dimension: "oberwelt"|"nether"
 | PUT | `/orte/instanzen/:id/angeheftet` | `{ angeheftet }` | `{ instanz }` – groß auf der Anzeige |
 | PUT | `/orte/instanzen/:id/erledigt` | `{ erledigt }` | `{ instanz }` – `instanz.erledigt = { von, am } \| null`, gilt für alle |
 | DELETE | `/orte/instanzen/:id` | – | `{ ok:true }` |
-| POST | `/orte/auslesen` | multipart `datei` | `{ erkannt:{ titel, kategorie, variante, dimension, x, y, z } \| null, banner:{ basis, ebenen, unklar } \| null }` – erst Seed-Map-Popup, sonst Banner-Anleitung |
+| – | `/orte/auslesen` | – | **weg seit Umbau Phase 3**: `TEXTERKENNUNG.screenshotAuslesen(datei)` in `texterkennung.js` liefert dasselbe `{ erkannt:{ titel, kategorie, variante, dimension, x, y, z } \| null, banner:{ basis, ebenen, unklar } \| null }` – erst Seed-Map-Popup, sonst Banner-Anleitung |
 | GET | `/welten/:id/biome` | – | `{ import:WeltImport \| null, kacheln:[{ dim, kx, kz, daten }] }` |
 | PUT | `/welten/:id/biome` | `{ import:{ dateiname, weltname, seed, spielversion, chunks, unbekannt }, kacheln }` | `{ import }` – ersetzt Import und alle Kacheln; `id`, `weltId`, `von`, `importiertAm` setzt der Server |
 | DELETE | `/welten/:id/biome` | – | `{ ok:true }` |
@@ -264,7 +264,7 @@ karte = { titel, unter?, bereich?, quelle?, typ?, dimension: "oberwelt"|"nether"
 
 `WeltImport = { id, weltId, dateiname, weltname, seed, spielversion, chunks:{ overworld, nether, end }, unbekannt:[{ bedrockId, chunks, beispiel:{ dim, x, z } }], von, importiertAm }` · Kachel `daten` = Base64 von 1024 × Uint16 LE (Bedrock-ID + 1, 0 = unerkundet)
 
-Live gelten alle Pfade mit Präfix `/api` und Bearer-Token. Die Texterkennung (`/orte/auslesen`) läuft im Board (`../koordinaten-board/server/src/erkennung.js`, `fuerCompanion()`); ein Biom-Popup erkennt sie weiter als Biom – die Companion zeigt es dann ausgegraut, weil Biome nur aus dem Welt-Import kommen.
+Live gelten alle Pfade mit Präfix `/api` und Bearer-Token. Die Texterkennung läuft am Handy (`texterkennung.js`, `fuerCompanion()`; der Board-Server lädt dieselbe Datei per `node:vm`); ein Biom-Popup erkennt sie weiter als Biom – die Companion zeigt es dann ausgegraut, weil Biome nur aus dem Welt-Import kommen.
 
 ## Einbau ins Modul Karte (modul-a-live-karte.html)
 
