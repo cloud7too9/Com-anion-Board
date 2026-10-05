@@ -1,4 +1,4 @@
-# Übergabe · Umsetzung des Plans (Stand 04.10.2026)
+# Übergabe · Umsetzung des Plans (Stand 05.10.2026)
 
 > **Einstieg für den nächsten Chat:** zuerst [`../UEBERGABE.md`](../UEBERGABE.md) (Arbeitsweise, Konventionen), dann diese Datei, dann [`WARTELISTE.md`](WARTELISTE.md) (was auf Max wartet). Der Plan selbst steht in [`PLAN.md`](PLAN.md).
 >
@@ -15,15 +15,16 @@
   - aus Strang B die Phasen **B1** (Datenmodell) und **B2** (Accounts mit PIN)
   - **CI auf GitHub:** Bei jedem PR und jedem Push auf `main` laufen alle Tests (Kapitel 6)
   - **Nur Bedrock (E15):** Java gibt es nirgendwo mehr, auch nicht bei den Portalen
+- **Umbau Netlify + Pi (`UMBAUPLAN.md`), Phase 1 „Server absichern“ gebaut** (05.10.2026, Branch `claude/vibrant-mccarthy-qzhzq4`, noch nicht gemergt): Anzeige nur mit Anzeige-Link (auch am Board-Gerät, Link in `daten/anzeige-link.txt`), `HOST`, `CF-Connecting-IP`, CORS mit `ERLAUBTE_URSPRUENGE`, Board-PIN mit 6 Ziffern. **Für Max:** Nach dem Merge bekommt das Board eine neue 6-stellige PIN (QR-Code neu scannen), und der Kiosk öffnet die Anzeige über den Link aus `server/daten/anzeige-link.txt` (`start.bat`/`start.sh` angepasst).
 - **Als Nächstes** (Kapitel 9):
+  0. **Umbau Phase 2** „API-Adresse konfigurierbar“ (`UMBAUPLAN.md`)
   1. **Bauplan „Sitzung“** (E16) schreiben und mit Max abnicken
   2. **Offline B3–B5** mit HTTPS am Board (N5 ist entschieden: eigenes Zertifikat)
   3. A7 (Größenstufen je Widget): Planungsrunde mit Max
   4. Inhalte, die noch nicht beschrieben sind (Warteliste, Kapitel 4)
 - **Git:**
-  - **Alles ist in `main`.** Offene PRs: keine.
+  - **Repo-Umzug am 05.10.2026** nach `Com-anion-Board` (Kapitel 3). `main` = Start-Commit ohne Verlauf; Phase 1 des Umbaus liegt auf `claude/vibrant-mccarthy-qzhzq4` und wartet auf PR und Merge durch Max.
   - **Gemergt wird nur nach Rückfrage bei Max**, auch wenn Claude den Merge ausführt.
-  - 16 gemergte Branches warten aufs Löschen durch Max (Kapitel 3). In der Cloud-Sitzung darf Claude keine Branches löschen.
 - **Tests:** alle grün in `main`, lokal und in der CI (Kapitel 6).
 - **Für Max wichtig:** Seit B2 gelten alte Anmeldungen nicht mehr. Jedes Handy meldet sich einmal neu an, mit Name und eigener PIN.
 
@@ -137,11 +138,11 @@ npm start                                              # Windows: start.bat (bau
 
 ---
 
-## 6. Tests (alle grün in `main`, 04.10.2026)
+## 6. Tests (alle grün, 05.10.2026)
 
 | Teil | Befehl | Ergebnis |
 |---|---|---|
-| Board-Server | `cd koordinaten-board && npm test` | 57 Tests |
+| Board-Server | `cd koordinaten-board && npm test` | 60 Tests (seit Umbau Phase 1: CORS, Client-IP hinter dem Tunnel, Board-PIN) |
 | Widgets | `cd companion/widgets && npm run typecheck && npm test` | Typecheck ok, 108 Unit-Tests |
 | Companion und Dashboard (Playwright) | `cd companion/tests && npm test` | 14 Dateien, 492 Prüfungen und 20 Dekoder-Tests |
 
@@ -164,6 +165,7 @@ Voraussetzungen für die Playwright-Tests:
 - **Typecheck der Widgets:** Dafür `npm run typecheck` nehmen (`tsc -b`). `tsc -p .` prüft nichts, weil die oberste `tsconfig.json` nur Referenzen enthält. `npm run build` prüft ebenfalls.
 - **Die Playwright-Tests laufen gegen `dist`.** Nach Änderungen an den Widgets erst `npm run build`, sonst testet man den alten Stand.
 - **Tests auf dem langsameren Runner:** Nach dem Beitreten öffnet die Companion bei einem leeren Board „Noch keine Welt“ erst nach dem Laden der Welten. Ein Test, der Sheets schließt, muss vorher auf dieses Sheet warten (`.sheet-kopf h2` = „Welt“), sonst überdeckt es später den nächsten Klick. Nachstellen lässt sich so etwas mit einer Verzögerung per `page.route("**/api/orte/welten", …)`.
+- **Seit Umbau Phase 1:** Die Anzeige braucht auch auf dem Board-Gerät den Anzeige-Link (`daten/anzeige-link.txt`, Konsole). Tests, die ein Board starten, holen ihn mit `anzeigeLinkQuery()` aus `companion/tests/hilfen.mjs`. Liefert ein Test die Companion von einem anderen Ursprung aus als das Board, braucht das Board `ERLAUBTE_URSPRUENGE` mit diesem Ursprung (so in `board.test.mjs`, `anzeigeschema.test.mjs`). Die Test-PIN ist `471100`.
 - **Am Handy läuft die Companion über `http://192.168…`, also nicht in einem sicheren Kontext.**
   - `crypto.randomUUID` gibt es dort nicht. Deshalb erzeugt `neueEintragId()` die IDs aus `getRandomValues`.
   - Service Worker gehen dort gar nicht. Deshalb kommt mit B3 HTTPS (N5).

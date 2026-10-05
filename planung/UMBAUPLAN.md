@@ -84,11 +84,11 @@ Sechs Phasen, jede als eigener Branch mit Pull Request wie bei `bereich/banner`.
 
 ### Phase 1: Server absichern · Branch `umbau/server-absichern`
 
-- [ ] Sonderrecht für localhost streichen: Anzeige nur noch mit Anzeige-Link, `ANZEIGE_OFFEN` entfernen
-- [ ] Server nur auf `127.0.0.1` lauschen lassen statt `0.0.0.0`, dann erreicht ihn nur noch `cloudflared`
-- [ ] Echte Client-IP aus dem Header `CF-Connecting-IP` lesen, für PIN-Sperre und Anmeldung
-- [ ] CORS für alle `/api`-Pfade und `/ws`: nur Ursprünge aus einer Liste (`ERLAUBTE_URSPRUENGE`, z. B. `https://deinedomain.de` und `http://localhost:5173`), Methoden inklusive `PUT` und `DELETE`
-- [ ] Board-PIN auf mindestens 6 Ziffern
+- [x] Sonderrecht für localhost streichen: Anzeige nur noch mit Anzeige-Link, `ANZEIGE_OFFEN` entfernen *(05.10.2026; der Server schreibt den Link der ersten Anzeige nach `daten/anzeige-link.txt`, die Startskripte öffnen ihn)*
+- [x] Server nur auf `127.0.0.1` lauschen lassen statt `0.0.0.0`, dann erreicht ihn nur noch `cloudflared` *(05.10.2026, als `HOST`; **Standard bleibt `0.0.0.0`**, weil bis Phase 5 alles lokal weiterläuft und die Handys im WLAN den Server sonst nicht mehr erreichen. Die Dienstdatei in Phase 6 setzt `HOST=127.0.0.1`.)*
+- [x] Echte Client-IP aus dem Header `CF-Connecting-IP` lesen, für PIN-Sperre und Anmeldung *(05.10.2026; der Header zählt nur bei Verbindungen von `127.0.0.1`, also von `cloudflared`)*
+- [x] CORS für alle `/api`-Pfade und `/ws`: nur Ursprünge aus einer Liste (`ERLAUBTE_URSPRUENGE`, z. B. `https://deinedomain.de` und `http://localhost:5173`), Methoden inklusive `PUT` und `DELETE` *(05.10.2026; dazu immer der eigene Ursprung, solange der Server die Seiten ausliefert)*
+- [x] Board-PIN auf mindestens 6 Ziffern *(05.10.2026; Erzeugung mit 6 Ziffern, kurze `RAUM_PIN` lehnt der Start ab, eine alte 4-stellige `pin.txt` wird ersetzt)*
 
 Git: nach jedem Punkt `npm test` in `koordinaten-board`, dann committen (z. B. „Anzeige nur noch per Anzeige-Link“). Push und PR am Ende der Phase, die GitHub-Tests laufen mit.
 
