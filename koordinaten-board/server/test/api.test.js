@@ -1,0 +1,155 @@
+// Companion-API gegen einen echten Server-Prozess (leerer Datenordner, eigener Port)
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const PORT = 3297;
+const BASIS = `http://127.0.0.1:${PORT}`;
+const ORDNER = mkdtempSync(path.join(tmpdir(), 'kb-api-'));
+let server;
+
+async function starten() {
+  server = spawn(process.execPath, ['src/server.js'], {
+    cwd: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
+    env: { ...process.env, PORT: String(PORT), DATEN_ORDNER: ORDNER, RAUM_PIN: '4711' },
+    stdio: 'ignore',
+  });
+  for (let i = 0; i < 50; i += 1) {
+    try { if ((await fetch(`${BASIS}/api/server`)).ok) return; } catch { /* startet noch */ }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error('Server startet nicht');
+}
+const beenden = () => new Promise((r) => { server.once('exit', r); server.kill('SIGTERM'); });
+
+before(starten);
+after(async () => { await beenden(); rmSync(ORDNER, { recursive: true, force: true }); });
+
+const anfrage = async (methode, pfad, token, body) => {
+  const res = await fetch(BASIS + pfad, {
+    method: methode,
+    headers: { 'content-type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return { status: res.status, daten: await res.json() };
+};
+const beitreten = async (name) => (await anfrage('POST', '/api/beitreten', null, { pin: '4711', name })).daten.token;
+
+test('ohne Anmeldung kein Zugriff', async () => {
+  assert.deepEqual((await anfrage('GET', '/api/server')).daten, { name: 'koordinaten-board' });
+  const r = await anfrage('GET', '/api/orte/welten');
+  assert.equal(r.status, 401);
+  assert.equal(r.daten.message, 'Nicht angemeldet');
+});
+
+test('Companion-Vertrag: Welten, Orte, Sammelobjekte, Portale, Banner, Rüstung', async () => {
+  const max = await beitreten('Max');
+  let r = await anfrage('POST', '/api/orte/welten', max, { seed: '6889192652397090698' });
+  assert.equal(r.status, 201);
+  const welt = r.daten.welt;
+  r = await anfrage('POST', '/api/orte/instanzen', max, { dimensionId: `d_${welt.id}_overworld`, kategorie: 'Village', variante: null, x: 1040, y: 64, z: 310, quelle: 'manuell' });
+  assert.equal(r.status, 201);
+  const id = r.daten.instanz.id;
+  r = await anfrage('POST', '/api/orte/instanzen', max, { dimensionId: `d_${welt.id}_overworld`, kategorie: 'Bastion', x: 1, y: null, z: 1, quelle: 'manuell' });
+  assert.deepEqual([r.status, r.daten.message], [422, '„Bastion“ gibt es in der Oberwelt nicht']);
+  assert.equal((await anfrage('PATCH', `/api/orte/instanzen/${id}`, max, { x: 1, y: null, z: 2 })).daten.instanz.z, 2);
+  assert.equal((await anfrage('GET', `/api/orte/welten/${welt.id}`, max)).daten.instanzen.length, 1);
+  // DELETE mit Content-Type, aber ohne Rumpf – so schickt es die Companion
+  assert.deepEqual((await anfrage('DELETE', `/api/orte/instanzen/${id}`, max)).daten, { ok: true });
+
+  const lena = await beitreten('Lena');
+  assert.equal((await anfrage('PUT', `/api/sammelobjekte/welten/${welt.id}/rib`, lena, { gefunden: true })).daten.status.rib.von, 'Lena');
+  r = await anfrage('POST', `/api/portale/welten/${welt.id}`, lena, { name: 'Basis', oberwelt: { x: 212, y: 71, z: -388 }, nether: { x: 26, y: 71, z: -49 } });
+  assert.equal(r.status, 201);
+  assert.equal((await anfrage('GET', `/api/portale/welten/${welt.id}`, max)).daten.verbindungen[0].von, 'Lena');
+  r = await anfrage('POST', '/api/banner', max, { name: 'Wappen', basis: 'white', ebenen: [{ muster: 'cross', farbe: 'red' }] });
+  assert.equal(r.status, 201);
+  assert.equal((await anfrage('GET', '/api/banner', lena)).daten.liste[0].name, 'Wappen');
+  assert.equal((await anfrage('PUT', '/api/banner/b_99', max, { name: 'x', basis: 'white', ebenen: [] })).status, 404);
+  r = await anfrage('POST', '/api/ruestung', lena, { name: 'Amethyst', teile: { chestplate: { ruestung: 'diamond', muster: 'silence', material: 'amethyst', verzaubert: true } } });
+  assert.equal(r.status, 201);
+  const set = r.daten.set;
+  assert.equal((await anfrage('GET', '/api/ruestung', max)).daten.sets[0].von, 'Lena');
+  r = await anfrage('PUT', `/api/ruestung/${set.id}`, max, { name: 'Amethyst', teile: { helmet: { ruestung: 'turtle' }, boots: { ruestung: 'turtle' } } });
+  assert.deepEqual([r.status, r.daten.message], [422, 'Schildkröte gibt es nur als Schildkrötenpanzer']);
+  assert.deepEqual((await anfrage('DELETE', `/api/ruestung/${set.id}`, max)).daten, { ok: true });
+  assert.equal((await anfrage('GET', '/api/ruestung', max)).daten.sets.length, 0);
+  assert.equal((await anfrage('PUT', '/api/board/einstellungen', max, { aktiveWelt: 'w_99' })).status, 404);
+
+  // Biome aus dem Welt-Import: ersetzen, lesen, löschen – auch große Welten passen durch
+  const kacheln = [];
+  for (let kx = -30; kx < 30; kx += 1) for (let kz = -10; kz < 10; kz += 1) kacheln.push({ dim: 'overworld', kx, kz, daten: Buffer.alloc(2048, kx & 0xff).toString('base64') });
+  const biome = { import: { seed: '6889192652397090698', weltname: 'Realm', chunks: { overworld: 1_228_800, nether: 0, end: 0 }, unbekannt: [] }, kacheln };
+  assert.ok(JSON.stringify(biome).length > 3_000_000);
+  r = await anfrage('PUT', `/api/orte/welten/${welt.id}/biome`, lena, biome);
+  assert.deepEqual([r.status, r.daten.import.von, r.daten.import.weltname], [200, 'Lena', 'Realm']);
+  r = await anfrage('GET', `/api/orte/welten/${welt.id}/biome`, max);
+  assert.deepEqual([r.daten.import.chunks.overworld, r.daten.kacheln.length, r.daten.kacheln[5].daten], [1_228_800, 1200, kacheln[5].daten]);
+  r = await anfrage('PUT', `/api/orte/welten/${welt.id}/biome`, max, { ...biome, import: { ...biome.import, seed: '1' } });
+  assert.deepEqual([r.status, r.daten.message], [422, 'Diese Welt hat einen anderen Seed']);
+  assert.deepEqual((await anfrage('DELETE', `/api/orte/welten/${welt.id}/biome`, max)).daten, { ok: true });
+  assert.equal((await anfrage('GET', `/api/orte/welten/${welt.id}/biome`, max)).daten.import, null);
+  assert.equal((await anfrage('GET', '/api/orte/welten/w_99/biome', max)).status, 404);
+});
+
+test('Rüstungs-Baukasten wird ausgeliefert (Texturen, Module, Manifest)', async () => {
+  const manifest = await (await fetch(`${BASIS}/ruestungs-baukasten/manifest.json`)).json();
+  assert.equal(manifest.teile.length, 4);
+  for (const [pfad, typ] of [['fertig/items/iron_helmet__amethyst.png', 'image/png'], ['vorlagen/eye_armor_trim_smithing_template.png', 'image/png'],
+    ['baukasten.js', 'application/javascript'], ['figur3d.js', 'application/javascript']]) {
+    const res = await fetch(`${BASIS}/ruestungs-baukasten/${pfad}`);
+    assert.equal(res.status, 200, pfad);
+    assert.ok(res.headers.get('content-type').startsWith(typ), `${pfad}: ${res.headers.get('content-type')}`);
+  }
+});
+
+test('Welt-Import wird ausgeliefert (Prüfseite, Worker, Module, Bundle)', async () => {
+  for (const [pfad, typ] of [['welt-pruefen.html', 'text/html'], ['biom-import.worker.js', 'application/javascript'],
+    ['biom-welt.js', 'application/javascript'], ['biom-dekoder.js', 'application/javascript'], ['biom-ids.js', 'application/javascript'],
+    ['vendor/mcbe-leveldb.js', 'application/javascript']]) {
+    const res = await fetch(`${BASIS}/${pfad}`);
+    assert.equal(res.status, 200, pfad);
+    assert.ok(res.headers.get('content-type').startsWith(typ), `${pfad}: ${res.headers.get('content-type')}`);
+  }
+  assert.equal((await fetch(`${BASIS}/vendor/../daten.json`)).status, 404);
+});
+
+test('Screenshot auslesen: Banner-Anleitung liefert banner statt Ort', { timeout: 60_000 }, async () => {
+  const max = await beitreten('Max');
+  const form = new FormData();
+  const bild = readFileSync(fileURLToPath(new URL('../../../referenz/banner/rezept-beispiel.jpg', import.meta.url)));
+  form.append('datei', new Blob([bild], { type: 'image/jpeg' }), 'rezept.jpg');
+  const res = await fetch(`${BASIS}/api/orte/auslesen`, { method: 'POST', headers: { authorization: `Bearer ${max}` }, body: form });
+  const d = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(d.erkannt, null);
+  assert.equal(d.banner.basis, 'black');
+  assert.deepEqual(d.banner.ebenen.map((e) => e.muster), ['border', 'rhombus', 'border', 'flower', 'square_top_left', 'square_bottom_right']);
+});
+
+test('Änderungen gehen live an alle, Daten überstehen einen Neustart', async () => {
+  const max = await beitreten('Max');
+  const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws?token=${encodeURIComponent(max)}`);
+  const nachrichten = [];
+  ws.onmessage = (e) => nachrichten.push(JSON.parse(e.data));
+  await new Promise((r) => { ws.onopen = r; });
+  const welt = (await anfrage('POST', '/api/orte/welten', max, { seed: '-42' })).daten.welt;
+  await anfrage('PUT', '/api/board/einstellungen', max, { aktiveWelt: welt.id, titel: 'Neustart-Welt' });
+  await anfrage('POST', '/api/orte/instanzen', max, { dimensionId: `d_${welt.id}_end`, kategorie: 'End City', x: 1300, y: 60, z: -820, quelle: 'manuell' });
+  await new Promise((r) => setTimeout(r, 200));
+  ws.close();
+  assert.ok(nachrichten.some((n) => n.art === 'geaendert' && n.bereich === 'orte' && n.weltId === welt.id));
+  const letzte = nachrichten.filter((n) => n.art === 'zustand').at(-1).zustand;
+  assert.deepEqual(letzte.orte.map((o) => [o.name, o.dimension, o.typ]), [['End City', 'ende', 'End City']]);
+  assert.equal(letzte.einstellungen.titel, 'Neustart-Welt');
+
+  await beenden();
+  await starten();
+  const nachher = await anfrage('GET', `/api/orte/welten/${welt.id}`, max);
+  assert.equal(nachher.daten.instanzen.length, 1);
+  assert.equal((await anfrage('GET', '/api/board/einstellungen', max)).daten.aktiv, welt.id);
+});
