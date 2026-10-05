@@ -76,6 +76,10 @@ Die Konsole zeigt dann die Adresse für die Handys und die PIN. Einfacher: den Q
 
 Ist ein Popup von Werbung verdeckt oder nicht aufgeklappt, meldet das Board „Kein Popup gefunden“ statt falsche Werte zu raten.
 
+## Auf dem Raspberry Pi (Umbau Phase 6)
+
+Dienstdatei, Umgebung, Tunnel-Konfiguration und Sicherung liegen in [`pi/`](pi/), die Schritte für Pi, Cloudflare und Netlify in [`pi/ANLEITUNG.md`](pi/ANLEITUNG.md).
+
 ## Entwicklung
 
 ```bash
