@@ -1,16 +1,20 @@
-// Gemeinsame Daten von Companion und Board in einer JSON-Datei (daten.json):
-// Welten, Orte (Typen + Instanzen), Sammelobjekte, Banner, Rüstungs-Sets,
-// Portal-Verbindungen und die Einstellungen der Anzeige. Die Abläufe entsprechen dem DEMO-Mock der
-// Companion (mockApi in companion-prototyp.html), geprüft wird mit denselben
+// Gemeinsame Daten von Companion und Board: Welten, Orte (Typen + Instanzen), Sammelobjekte, Banner,
+// Rüstungs-Sets, Portal-Verbindungen, Anzeigen, Accounts und die Einstellungen der Anzeige. Die Abläufe
+// entsprechen dem DEMO-Mock der Companion (mockApi in companion-prototyp.html), geprüft wird mit denselben
 // Regeln (companion/regeln.js).
-// Der Welt-Import (Biome) liegt je Welt in biome/<weltId>.json: Die Kacheln sind groß und sollen
-// nicht bei jeder kleinen Änderung mit daten.json neu geschrieben werden.
-import { readFile, writeFile, rename, mkdir, rm } from 'node:fs/promises';
+// Gespeichert wird seit Umbau Phase 4 in SQLite (daten.db, speicher.js): Die Daten bleiben im Speicher,
+// nach jeder Änderung wird kurz gewartet und dann geschrieben, was sich geändert hat (version je Zeile,
+// fortlaufende Änderungsnummer). Die Biome des Welt-Imports liegen je Kachel in einer Zeile.
+// Eine alte daten.json (und biome/<weltId>.json) wird beim ersten Start einmal übernommen und bleibt
+// als Sicherung liegen (werkzeuge/nach-sqlite.mjs macht dasselbe von Hand).
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { mkdirSync } from 'node:fs';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { regeln } from './regeln.js';
 import { layoutPruefen, reihenGueltig } from './layout.js';
 import { WIDGETS } from './widgets.js';
+import { Speicher } from './speicher.js';
 
 const { DIM_ORDER, BIOMES, SAMMELOBJEKTE, WELTGRENZE } = regeln;
 
@@ -65,16 +69,44 @@ const ganz = (v) => Number.isInteger(v) && Math.abs(v) <= WELTGRENZE;
 
 export class Daten {
   constructor(ordner) {
-    this.datei = path.join(ordner, 'daten.json');
-    this.biomeOrdner = path.join(ordner, 'biome');
+    this.ordner = ordner;
+    this.datei = path.join(ordner, 'daten.json');       // alter Stand, nur noch zum Übernehmen
+    this.dbDatei = path.join(ordner, 'daten.db');
+    this.biomeOrdner = path.join(ordner, 'biome');      // alte Biom-Dateien, nur noch zum Übernehmen
     this.inhalt = leer();
+    /** Änderungsnummer: steigt mit jeder Änderung, läuft über Neustarts weiter (aenderungen.nr in daten.db) */
     this.version = 0;
     this.timer = null;
-    this.biomeReihe = Promise.resolve();   // Biom-Dateien nacheinander schreiben
+    this.speicher = null;       // SQLite, geöffnet beim Laden oder ersten Speichern
+    this.gespeichert = {};      // je Sammlung: id → zuletzt geschriebene Zeile (JSON), für den Abgleich beim Speichern
+  }
+
+  /** daten.db öffnen (einmal); der Ordner entsteht bei Bedarf */
+  oeffnen() {
+    if (!this.speicher) {
+      mkdirSync(this.ordner, { recursive: true });
+      this.speicher = new Speicher(this.dbDatei);
+    }
+    return this.speicher;
   }
 
   async laden() {
-    await mkdir(path.dirname(this.datei), { recursive: true });
+    await mkdir(this.ordner, { recursive: true });
+    const speicher = this.oeffnen();
+    if (speicher.leer()) {
+      await this.jsonUebernehmen();
+    } else {
+      const { sammlungen, gespeichert } = speicher.lesen();
+      this.inhalt = { ...leer(), ...sammlungen, zaehler: speicher.wert('zaehler') ?? 0, einstellungen: { ...STANDARD_EINSTELLUNGEN, ...(speicher.wert('einstellungen') ?? {}) } };
+      this.gespeichert = gespeichert;
+      this.version = speicher.aenderungsNr();
+    }
+    this.erstellerNachtragen();
+    this.anzeigenSicherstellen();
+  }
+
+  /** Einmaliger Umzug (Umbau Phase 4): daten.json und biome/<weltId>.json → daten.db. Die JSON-Dateien bleiben als Sicherung. */
+  async jsonUebernehmen() {
     let text;
     try {
       text = await readFile(this.datei, 'utf8');
@@ -82,11 +114,22 @@ export class Daten {
       this.inhalt = { ...leer(), ...roh, einstellungen: { ...STANDARD_EINSTELLUNGEN, ...roh.einstellungen } };
     } catch (f) {
       if (f.code !== 'ENOENT') console.warn('daten.json unlesbar, starte leer:', f.message);
-      text = null;
+      return;   // nichts zu übernehmen: leerer Start
     }
-    if (text) await this.biomPunkteEntfernen(text);
+    await this.biomPunkteEntfernen(text);
     this.erstellerNachtragen();
-    this.anzeigenSicherstellen();
+    let importe = 0;
+    for (const w of this.inhalt.welten) {
+      try {
+        const b = JSON.parse(await readFile(this.biomDateiAlt(w.id), 'utf8'));
+        if (b.import) { this.speicher.biomeSetzen(w.id, b.import, b.kacheln ?? []); importe += 1; }
+      } catch (f) {
+        if (f.code !== 'ENOENT') console.warn(`Biome von ${w.id} unlesbar, nicht übernommen:`, f.message);
+      }
+    }
+    await this.speichern();
+    const eintraege = Object.values(this.speicher.umfang()).reduce((a, b) => a + b, 0);
+    console.log(`  daten.json nach daten.db übernommen (${eintraege} Zeilen, ${importe} Welt-Importe). Die JSON-Dateien bleiben als Sicherung liegen.`);
   }
 
   /** Alte Einträge ohne erstellerId (vor Strang B) bekommen „unbekannt“ */
@@ -117,11 +160,19 @@ export class Daten {
     this.timer = setTimeout(() => this.speichern().catch(console.error), 300);
   }
 
+  /** Schreibt, was sich seit dem letzten Mal geändert hat, in daten.db (eine Transaktion) */
   async speichern() {
     clearTimeout(this.timer);
-    const tmp = `${this.datei}.tmp`;
-    await writeFile(tmp, JSON.stringify(this.inhalt, null, 2));
-    await rename(tmp, this.datei);
+    const { gespeichert, nr } = this.oeffnen().schreiben(this.inhalt, this.gespeichert);
+    this.gespeichert = gespeichert;
+    this.version = Math.max(this.version, nr);
+  }
+
+  /** Beim Beenden: ausstehende Änderungen schreiben und daten.db schließen */
+  async schliessen() {
+    await this.speichern();
+    this.speicher?.schliessen();
+    this.speicher = null;
   }
 
   neueId(praefix) {
@@ -246,51 +297,33 @@ export class Daten {
     return { weltId: this.dimension(i.dimensionId)?.worldId };
   }
 
-  // ---------- Welt-Import: Biome je Welt ----------
+  // ---------- Welt-Import: Biome je Welt (in daten.db, eine Zeile je Kachel) ----------
 
-  biomDatei(weltId) {
-    this.welt(weltId);
+  /** Alte Datei des Welt-Imports (vor Umbau Phase 4), nur noch zum Übernehmen */
+  biomDateiAlt(weltId) {
     return path.join(this.biomeOrdner, `${weltId.replace(/[^\w-]/g, '_')}.json`);
   }
 
   /** → { import: WeltImport | null, kacheln: [{ dim, kx, kz, daten }] } */
   async biomeLesen(weltId) {
-    try {
-      return JSON.parse(await readFile(this.biomDatei(weltId), 'utf8'));
-    } catch (f) {
-      if (f instanceof DatenFehler) throw f;
-      if (f.code !== 'ENOENT') console.warn(`Biome von ${weltId} unlesbar:`, f.message);
-      return { import: null, kacheln: [] };
-    }
+    this.welt(weltId);
+    return this.oeffnen().biomeLesen(weltId);
   }
 
   /** Ersetzt Import und alle Kacheln der Welt in einem Schritt → { import } */
   async biomeSetzen(weltId, body, von) {
-    const datei = this.biomDatei(weltId);
     const problem = regeln.biomImportPruefen(body, this.welt(weltId));
     if (problem) fehler(422, problem);
     const sauber = regeln.biomImportSauber(body);
     const imp = { id: this.neueId('bi'), weltId, ...kopie(sauber.import), von: urheber(von).von, importiertAm: new Date().toISOString() };
+    this.oeffnen().biomeSetzen(weltId, imp, sauber.kacheln);
     this.speichernVerzoegert();   // Zähler der IDs
-    await this.biomeSchreiben(datei, JSON.stringify({ import: imp, kacheln: sauber.kacheln }));
     return { import: imp };
   }
 
   async biomeLoeschen(weltId) {
-    const datei = this.biomDatei(weltId);
-    await this.biomeSchreiben(datei, null);
-  }
-
-  /** Atomar schreiben (oder löschen, inhalt null) – eins nach dem anderen */
-  biomeSchreiben(datei, inhalt) {
-    const lauf = this.biomeReihe.then(async () => {
-      if (inhalt === null) return rm(datei, { force: true });
-      await mkdir(this.biomeOrdner, { recursive: true });
-      await writeFile(`${datei}.tmp`, inhalt);
-      await rename(`${datei}.tmp`, datei);
-    });
-    this.biomeReihe = lauf.catch(() => {});
-    return lauf;
+    this.welt(weltId);
+    this.oeffnen().biomeLoeschen(weltId);
   }
 
   // ---------- Sammelobjekte ----------

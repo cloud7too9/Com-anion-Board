@@ -101,7 +101,7 @@ Handy (Companion, /)                 Board-Server (Fastify, :3000)              
 ───────────────────                  ─────────────────────────────                ─────────────────
 Beitreten: Board-PIN + Account  ──▶  identitaet.js: anmelden → Token (Gerät)
   (Name + eigene PIN)                werBistDu(req) für API, /ws, Widgets
-Daten anlegen (ID vom Handy)    ──▶  daten.js (daten.json): erstellerId = Account
+Daten anlegen (ID vom Handy)    ──▶  daten.js (daten.db, SQLite): erstellerId = Account
 „Aufs Board“ (BOARD_KARTEN)     ──▶  /ws zeigen → gezeigt                    ──▶  /anzeige (alt, React)
 Board → Anzeigen → anordnen     ──▶  PUT /api/anzeigen/:id/layout, /vollbild
   = /dashboard/anordnen               layout.js prüft, geaendert „layout“      ──▶  /dashboard (Widgets)
@@ -142,7 +142,7 @@ npm start                                              # Windows: start.bat (bau
 
 | Teil | Befehl | Ergebnis |
 |---|---|---|
-| Board-Server | `cd koordinaten-board && npm test` | 58 Tests (seit Umbau Phase 1: CORS, Client-IP hinter dem Tunnel, Board-PIN; seit Phase 3 ohne OCR) |
+| Board-Server | `cd koordinaten-board && npm test` | 59 Tests (seit Umbau Phase 1: CORS, Client-IP hinter dem Tunnel, Board-PIN; seit Phase 3 ohne OCR; seit Phase 4 mit SQLite-Umzug) |
 | Widgets | `cd companion/widgets && npm run typecheck && npm test` | Typecheck ok, 108 Unit-Tests |
 | Companion und Dashboard (Playwright) | `cd companion/tests && npm test` | 16 Dateien (seit Umbau Phase 2 auch `getrennt`), dazu 20 Dekoder-Tests |
 
@@ -170,13 +170,14 @@ Voraussetzungen für die Playwright-Tests:
   - `crypto.randomUUID` gibt es dort nicht. Deshalb erzeugt `neueEintragId()` die IDs aus `getRandomValues`.
   - Service Worker gehen dort gar nicht. Deshalb kommt mit B3 HTTPS (N5).
 - **Alte Anmeldungen:** Tokens von vor B2 werden abgelehnt. Die Companion prüft beim Start mit `IDENTITAET.werBistDu()` und öffnet dann das Beitreten. Die Accounts bleiben, auch wenn man `geheim.txt` löscht (nur die Anmeldungen verfallen).
-- **Migrationen beim Laden von `daten.json`:**
+- **Umzug nach SQLite (Umbau Phase 4):** Beim ersten Start mit leerer `daten.db` übernimmt `daten.js` die alte `daten.json` und `biome/*.json` einmal und liest sie danach nie wieder (Sicherung). Tests, die den Stand nach dem Speichern prüfen, laden ein zweites `Daten` statt Dateien zu lesen. Der Server braucht Node 22.13+ (`node:sqlite`), die npm-Skripte setzen `--disable-warning=ExperimentalWarning`.
+- **Migrationen beim Laden (nur noch beim Übernehmen von `daten.json`):**
   - Alte Biom-Punkte werden entfernt, mit Sicherung `daten.vor-welt-import.json`.
   - Fehlende `erstellerId` wird zu „unbekannt“.
 - **Am Board kein Bearbeiten:** Das Dashboard ist dort reine Anzeige. Geändert wird nur über `/dashboard/anordnen` (Token) oder ohne Board im Browser-Speicher.
 - **Portal-Regeln:** Es gibt nur Bedrock (E15). Handy und Board rechnen mit ±128 in beiden Dimensionen.
 - **Platzhalter-Größen:** Kleine Widgets schneiden ihre Karte ab, zum Beispiel der Sammel-Fortschritt mit 4×3 Zellen. Das ist bekannt und wird mit A7 gelöst.
-- **`ENOENT … daten.json.tmp`** in den Server-Tests ist harmlos. Ein verzögertes Speichern trifft auf den schon gelöschten Testordner.
+- **`SQLITE_CANTOPEN` oder `ENOENT`** in den Server-Tests ist harmlos. Ein verzögertes Speichern trifft auf den schon gelöschten Testordner.
 - **Die Startskripte** (`start.bat`, `start.sh`) bauen das Dashboard noch nicht mit. Das kommt mit E16, wenn `/dashboard` die Anzeige wird.
 - **GitHub und Git:**
   - Gestapelte PRs lassen sich auf GitHub nicht auf eine andere Basis umstellen („part of a stack“). Lieber keine Stapel mehr, sondern einen PR je abgeschlossenem Schritt direkt gegen `main`.

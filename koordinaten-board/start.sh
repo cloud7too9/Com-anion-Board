@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 [ -d server/node_modules ] || npm run installieren
 [ -d client/dist ] || npm run build
 
-node server/src/server.js &
+node --disable-warning=ExperimentalWarning server/src/server.js &   # node:sqlite meldet sich sonst als „experimental“
 SERVER=$!
 trap 'kill $SERVER' EXIT
 

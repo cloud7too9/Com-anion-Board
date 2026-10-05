@@ -409,7 +409,7 @@ app.setNotFoundHandler((req, reply) => {
 // Sauber speichern beim Beenden
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, async () => {
-    await daten.speichern().catch(() => {});
+    await daten.schliessen().catch(() => {});
     process.exit(0);
   });
 }

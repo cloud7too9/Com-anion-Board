@@ -22,7 +22,8 @@ if errorlevel 1 (
 rem Anzeige nach kurzer Wartezeit im Vollbild oeffnen - mit dem Anzeige-Link aus der Datei des Servers
 start "" cmd /c "timeout /t 3 >nul && call "%~dp0anzeige-oeffnen.bat""
 
-node server\src\server.js
+rem node:sqlite meldet sich sonst als "experimental"
+node --disable-warning=ExperimentalWarning server\src\server.js
 goto :eof
 
 :fehler

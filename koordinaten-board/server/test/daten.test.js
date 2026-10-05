@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Daten, DatenFehler } from '../src/daten.js';
@@ -42,7 +42,7 @@ test('Welten, Orte, Typen – wie der DEMO-Mock der Companion', () => {
   wirft(() => d.instanzLoeschen(instanz.id), 404);
 });
 
-test('Welt-Import: je Welt eine Datei, ein neuer Import ersetzt den alten', async () => {
+test('Welt-Import: je Welt ein Import in daten.db, ein neuer ersetzt den alten', async () => {
   const o = ordner();
   const d = new Daten(o);
   d.weltAnlegen({ seed: '42' });
@@ -53,8 +53,8 @@ test('Welt-Import: je Welt eine Datei, ein neuer Import ersetzt den alten', asyn
   assert.deepEqual(await d.biomeLesen('w_1'), { import: null, kacheln: [] });
   const { import: imp } = await d.biomeSetzen('w_1', body, 'Max');
   assert.deepEqual([imp.weltId, imp.von, imp.weltname, imp.chunks.end, typeof imp.importiertAm], ['w_1', 'Max', 'Realm', 0, 'string']);
-  assert.ok(existsSync(path.join(o, 'biome', 'w_1.json')));
-  assert.equal(JSON.parse(readFileSync(path.join(o, 'biome', 'w_1.json'), 'utf8')).kacheln.length, 2);
+  assert.equal((await d.biomeLesen('w_1')).kacheln.length, 2);
+  assert.ok(existsSync(path.join(o, 'daten.db')) && !existsSync(path.join(o, 'biome')), 'Biome liegen in daten.db, nicht mehr als Datei');
   await assert.rejects(d.biomeSetzen('w_2', body, 'Max'), (f) => f.status === 422 && f.message === 'Diese Welt hat einen anderen Seed');
   await assert.rejects(d.biomeSetzen('w_9', body, 'Max'), (f) => f.status === 404);
   await assert.rejects(d.biomeLesen('w_9'), (f) => f.status === 404);
@@ -88,7 +88,43 @@ test('Alte Biom-Punkte aus Screenshots werden beim Laden entfernt, vorher gesich
   assert.deepEqual(d.inhalt.instanzen.map((i) => i.id), ['i_5']);
   assert.deepEqual(d.inhalt.typen.map((t) => t.id), ['t_3']);
   assert.deepEqual(JSON.parse(readFileSync(path.join(o, 'daten.vor-welt-import.json'), 'utf8')), alt);
-  assert.deepEqual(JSON.parse(readFileSync(path.join(o, 'daten.json'), 'utf8')).instanzen.map((i) => i.id), ['i_5']);
+  assert.deepEqual(JSON.parse(readFileSync(path.join(o, 'daten.json'), 'utf8')), alt, 'daten.json bleibt unverändert als Sicherung');
+  await d.schliessen();
+  const neu = new Daten(o);
+  await neu.laden();
+  assert.deepEqual(neu.inhalt.instanzen.map((i) => i.id), ['i_5'], 'daten.db hat den bereinigten Stand');
+  rmSync(o, { recursive: true, force: true });
+});
+
+test('Umzug nach SQLite: daten.json und biome/*.json einmal übernehmen, danach zählt nur daten.db; version je Zeile, Änderungsnummer', async () => {
+  const o = ordner();
+  mkdirSync(path.join(o, 'biome'));
+  writeFileSync(path.join(o, 'daten.json'), JSON.stringify({ zaehler: 4, welten: [{ id: 'w_1', seed: '42' }], typen: [], instanzen: [],
+    banner: [{ id: 'b_2', name: 'Zwei', basis: 'white', ebenen: [], von: 'Max', erstellerId: 'u1', am: '2026-10-01' }, { id: 'b_3', name: 'Drei', basis: 'red', ebenen: [], von: 'Max', erstellerId: 'u1', am: '2026-10-02' }],
+    einstellungen: { titel: 'Alt', qrZeigen: false, aktiveWelt: 'w_1' } }));
+  const daten = Buffer.alloc(2048, 9).toString('base64');
+  writeFileSync(path.join(o, 'biome', 'w_1.json'), JSON.stringify({ import: { id: 'bi_4', weltId: 'w_1', seed: '42', chunks: { overworld: 1 } }, kacheln: [{ dim: 'overworld', kx: 1, kz: 2, daten }] }));
+  const d = new Daten(o);
+  await d.laden();
+  assert.deepEqual(d.inhalt.banner.map((b) => b.name), ['Zwei', 'Drei'], 'Reihenfolge bleibt');
+  assert.equal(d.einstellungenLesen().titel, 'Alt');
+  assert.deepEqual((await d.biomeLesen('w_1')).kacheln, [{ dim: 'overworld', kx: 1, kz: 2, daten }]);
+  assert.ok(existsSync(path.join(o, 'daten.json')) && existsSync(path.join(o, 'biome', 'w_1.json')), 'JSON-Dateien bleiben als Sicherung');
+  const nr = d.version;
+  assert.ok(nr >= 3, `Änderungsnummer zählt die geschriebenen Zeilen (${nr})`);
+
+  // Änderung: nur diese Zeile bekommt version 2, die Änderungsnummer läuft weiter; danach gilt nur noch daten.db
+  d.bannerAendern('b_3', { name: 'Drei neu', basis: 'red', ebenen: [] });
+  await d.speichern();
+  const versionen = d.speicher.db.prepare('SELECT id, version FROM banner ORDER BY id').all().map((r) => [r.id, r.version]);
+  assert.deepEqual(versionen, [['b_2', 1], ['b_3', 2]]);
+  assert.ok(d.version > nr);
+  writeFileSync(path.join(o, 'daten.json'), JSON.stringify({ zaehler: 99, welten: [{ id: 'w_7', seed: '7' }] }));   // wird nicht mehr gelesen
+  await d.schliessen();
+  const neu = new Daten(o);
+  await neu.laden();
+  assert.deepEqual([neu.inhalt.welten[0].id, neu.inhalt.banner[1].name, neu.version], ['w_1', 'Drei neu', d.version]);
+  await neu.schliessen();
   rmSync(o, { recursive: true, force: true });
 });
 
