@@ -1,6 +1,10 @@
 # Übergabe · Minecraft Companion & Koordinaten-Board
 
-Stand: 04.10.2026 · Einstieg für einen neuen Chat
+Stand: 05.10.2026 · Einstieg für einen neuen Chat
+
+> **Repo-Umzug (05.10.2026):** Dieses Repo `Com-anion-Board` hat mit dem Stand von `flexibel-visionboard` (`main` 9d5be46) als einem Start-Commit begonnen. Der alte Verlauf, die alten Branches und die alten PR-Nummern liegen weiter in [`flexibel-visionboard`](https://github.com/cloud7too9/flexibel-visionboard). Mitgenommen wurde nur `bereich/karte-mcworld` als eigener Stand ohne Eltern (nicht mergen, nur nachschlagen).
+>
+> **Umbau auf Netlify + Raspberry Pi:** Plan und Haken in [`planung/UMBAUPLAN.md`](planung/UMBAUPLAN.md), Stand der Phasen in [`planung/UEBERGABE.md`](planung/UEBERGABE.md).
 
 > **Stand der Umsetzung von `planung/PLAN.md`** (Widget-Dashboard, Welt-Import, Accounts): [`planung/UEBERGABE.md`](planung/UEBERGABE.md) – was gebaut ist, Branches, Starten, Tests, nächste Schritte. Was auf Max wartet: [`planung/WARTELISTE.md`](planung/WARTELISTE.md).
 
@@ -24,6 +28,10 @@ Diese Datei enthält, was **für beide Projekte** gilt: Arbeitsweise, Zusammensp
 
 Geht es ums Raum-Board, statt der Companion-Übergabe `koordinaten-board/UEBERGABE.md` lesen.
 
+Geht es mit dem Umbau weiter (Netlify, Pi, Tunnel), zum Beispiel:
+
+> Lies `UEBERGABE.md`, danach `planung/UMBAUPLAN.md` und `planung/UEBERGABE.md`. Mach mit Phase 2 (API-Adresse konfigurierbar) weiter.
+
 Geht es mit dem Plan weiter (Widget-Dashboard, Offline, Accounts), zum Beispiel:
 
 > Lies `UEBERGABE.md`, danach `planung/UEBERGABE.md` und `planung/WARTELISTE.md`. Schreib den Bauplan „Sitzung“ (E16) und leg ihn mir vor.
@@ -42,7 +50,7 @@ UEBERGABE.md              ← diese Datei (projektübergreifend)
 companion/                ← Companion: Seite + regeln.js + icons/ + ruestungs-baukasten/, Tests, Entwürfe, eigene Referenzbilder
 companion/widgets/        ← Widget-Ansicht fürs Board (Vite + React + TS, aus MainHub), Umbau laut planung/PLAN.md
 koordinaten-board/        ← Board: Server der Companion (Fastify) + Anzeige (React)
-planung/                  ← Gesamtplan (PLAN.md), Ideen und Baupläne der Planungskommission
+planung/                  ← Umbauplan (UMBAUPLAN.md), Gesamtplan (PLAN.md), Ideen und Baupläne der Planungskommission
 referenz/                 ← gemeinsame Referenz (Datenmodell, Seed-Map, Dashboard-Vorbild)
 ```
 
@@ -60,6 +68,7 @@ Was wohin gehört:
 - **Git**: Bei jedem Schritt sagen, wann committet und gepusht wird. Nach einem eigenen Commit kurz bestätigen, z. B. „Commit erstellt: …“.
   - Companion: jeder Bereich bekommt einen eigenen Branch `bereich/<name>`.
   - Board: Änderungen auf einem Branch `board/<thema>`.
+  - Umbau (Netlify + Pi): je Phase ein Branch `umbau/<phase>` mit PR, wie in `planung/UMBAUPLAN.md` beschrieben.
   - **Gemergt wird nur nach Rückfrage bei Max**, auch wenn Claude den Merge ausführt (Wunsch von Max, 04.10.2026).
 - **Bereiche geht Max einzeln durch.** Erst steht der Rahmen, dann folgen die Details. Nichts ausbauen, was nicht besprochen ist.
 - **Datenmodell minimal halten.** Es wird nur erweitert, wenn ein Bereich es konkret braucht. FeatureTypes werden nicht erfunden.

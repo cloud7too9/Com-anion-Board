@@ -78,13 +78,11 @@ Pfade unter `model/`, `lib/`, `components/` und `features/` liegen in `companion
 
 ## 3. Branches und Mergen
 
-- **Alles ist in `main`**, offene PRs gibt es nicht. Gearbeitet wurde zuletzt auf `claude/pr-status-review-yrg9m9`. Er ist mit #22 gemergt und kann für die nächste Runde neu von `main` abzweigen.
+- **Repo-Umzug (05.10.2026):** Gearbeitet wird seitdem in `cloud7too9/Com-anion-Board`. `main` dort ist der Stand von `flexibel-visionboard` (`main` 9d5be46, Merge von PR #26) als **ein Start-Commit ohne Verlauf**. Die 16 gemergten Branches und alle PR-Nummern bis #26 gibt es nur noch im alten Repo; löschen muss Max dort nichts mehr. Die PR-Nummern in dieser Datei meinen das alte Repo.
+- **Mitgenommen:** `bereich/karte-mcworld` als eigener Stand ohne Eltern (ältere Fassung der Biom-Phasen 2–4: Prüfseite `welt-pruefen.html`, `welt-import.test.mjs`). #7 und #19 haben den Inhalt ersetzt; der Branch ist zum Nachschlagen, ein Merge scheitert absichtlich an „unrelated histories“.
+- **Umbau:** je Phase ein Branch `umbau/<phase>` mit PR gegen `main` (`UMBAUPLAN.md`). Phase 1 läuft auf `claude/vibrant-mccarthy-qzhzq4` (Cloud-Sitzung, Branchname fest vorgegeben); Max kann ihn auf GitHub in `umbau/server-absichern` umbenennen.
 - **Mergen:** nur nach Rückfrage bei Max, immer mit **„Create a merge commit“**.
-- **Zum Löschen** (Max auf GitHub → Branches; Inhalt komplett in `main`):
-  `bereich/banner-screenshot`, `bereich/karte-welt-upload`, `bereich/mainhub-visionboard`, `bereich/ruestung`, `bereich/sammelobjekte`, `bereich/widgets-uebernahme`, `bereich/widgets-raster`, `bereich/widgets-groessen`, `bereich/widgets-struktur`, `bereich/widgets-register`, `bereich/widgets-themes`, `bereich/widgets-anzeigen`, `board/anzeige-link`, `board/identitaet`, `board/scanner`, `board/zusammenfuehrung`.
-  Bei `bereich/karte-welt-upload` fehlt in `main` nur der leere Merge-Commit von #8.
-- **Behalten:** `bereich/karte-mcworld`. Dort liegen die Phasen 2–4 des Biom-Plans in einer älteren Fassung (Prüfseite `welt-pruefen.html`, `welt-import.test.mjs` mit einer 55-MB-Welt). #7 hat sie ersetzt; Phase 1 kam mit #19.
-- **Empfehlung:** In den Repo-Einstellungen „Automatically delete head branches“ einschalten. Dann verschwindet ein Branch nach dem Merge, und ein PR kann nicht mehr in einen schon gemergten Branch gehen (so ging #8 verloren).
+- **Empfehlung:** In den Repo-Einstellungen „Automatically delete head branches“ einschalten. Dann verschwindet ein Branch nach dem Merge, und ein PR kann nicht mehr in einen schon gemergten Branch gehen (so ging im alten Repo #8 verloren).
 
 ### Verlauf bis 04.10.2026
 
@@ -201,6 +199,7 @@ Voraussetzungen für die Playwright-Tests:
 
 ## 9. Nächste Schritte
 
+0. **Umbau auf Netlify + Raspberry Pi** nach `UMBAUPLAN.md`: Phase 1 „Server absichern“ läuft (dieser Branch), danach Phase 2 „API-Adresse konfigurierbar“. Die fünf offenen Entscheidungen im Umbauplan (Domain, Board-Gerät, Startseite, `/app/`-Inhalt, Node-Version am Pi) braucht es erst ab Phase 5.
 1. **Bauplan „Sitzung“ (E16)** als `planung/bauplaene/Bauplan-Sitzung.md`, dann Max fragen. Fest steht:
    - Die Sitzung lebt, solange das Board läuft. Ein Neustart beginnt leer; das gespeicherte Layout der Anzeige (A6) bleibt.
    - Inhalte lassen sich während der Laufzeit live ändern.
