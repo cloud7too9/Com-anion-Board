@@ -28,6 +28,10 @@ Board-Server: `npm run build`, dann `http://localhost:3000/dashboard` (im
 Board-Ordner geht auch `npm run dashboard:build`). Ein eigenes Docker-Image gibt
 es nicht. Im Dev-Betrieb leitet Vite `/api` und `/ws` an ein Board auf Port 3000
 weiter; läuft keins, zeigen die Widgets **Beispielkarten** (Hinweis im Kopf).
+Liegt die API woanders (Netlify ↔ Pi, Umbau Phase 2), beim Bauen
+`VITE_API_URL=https://api.deinedomain.de npm run build` setzen: `fetch` und
+WebSocket gehen dann dorthin (`src/features/karten/lib/api.ts`), das Board
+braucht den Ursprung der Seite in `ERLAUBTE_URSPRUENGE`.
 Playwright-Tests mit Screenshots (vorher `npm run build`):
 `cd ../tests && node widgets.test.mjs` (ohne Board, Beispielkarten) und
 `node widgets-board.test.mjs` (am echten Board).

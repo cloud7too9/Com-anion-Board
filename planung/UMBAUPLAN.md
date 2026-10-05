@@ -94,9 +94,9 @@ Git: nach jedem Punkt `npm test` in `koordinaten-board`, dann committen (z. B. �
 
 ### Phase 2: API-Adresse konfigurierbar · Branch `umbau/api-adresse`
 
-- [ ] Companion: `API_BASIS` aus einer Konfiguration lesen, Standard bleibt `/api` für lokal
-- [ ] Anzeige und Widget-Dashboard: `VITE_API_URL` für `fetch` und WebSocket statt `location.host`
-- [ ] Lokal prüfen: Frontends über Vite, Server auf `:3000`, also schon getrennte Ursprünge
+- [x] Companion: `API_BASIS` aus einer Konfiguration lesen, Standard bleibt `/api` für lokal *(05.10.2026: `companion/konfig.js` mit `apiAdresse`, leer = eigener Ursprung; daraus `BOARD_ADRESSE` und `API_BASIS`, auch für Beitreten und WebSocket)*
+- [x] Anzeige und Widget-Dashboard: `VITE_API_URL` für `fetch` und WebSocket statt `location.host` *(05.10.2026: `client/src/lib/api.ts`, `widgets/src/features/karten/lib/api.ts`)*
+- [x] Lokal prüfen: Frontends über Vite, Server auf `:3000`, also schon getrennte Ursprünge *(05.10.2026: als Playwright-Test `companion/tests/getrennt.test.mjs`: Companion von einem eigenen Server, `konfig.js` zeigt aufs Board, Beitreten, API und Live über CORS)*
 
 Git: ein Commit je Frontend, Playwright-Tests in `companion/tests` vor dem Push.
 

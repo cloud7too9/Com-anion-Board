@@ -8,7 +8,7 @@ Eine HTML-Datei, Vanilla JS, gleiche Shell und Basis-CSS wie `modul-a-live-karte
 
 **Ausprobieren:** `companion-prototyp.html` direkt öffnen (am Handy oder Desktop) – dann läuft der DEMO-Mock mit Beispielwelt. **Live** läuft die Companion, wenn das Koordinaten-Board sie ausliefert: Board starten, `http://<board>:3000/?pin=<PIN>` öffnen oder den QR-Code der Anzeige mit der Kamera-App scannen (siehe „Live-Betrieb“). Mit `?modul=sammelobjekte`, `?modul=portale`, `?modul=banner` oder `?modul=ruestung` startet man direkt im jeweiligen Bereich, `?demo=1` erzwingt den Mock.
 
-Neben der Seite gehören `regeln.js` (Stammdaten und Regeln, die auch der Board-Server lädt), `board-karten.js` (Anzeigeschemas, lädt der Board-Server ebenfalls), `icons/` (Kennblöcke) und `ruestungs-baukasten/` (Bedrock-Texturen für Rüstung und Sammelobjekte) in denselben Ordner.
+Neben der Seite gehören `konfig.js` (Adresse des Boards, leer = der Server, der die Seite ausliefert; Umbau Phase 2), `regeln.js` (Stammdaten und Regeln, die auch der Board-Server lädt), `board-karten.js` (Anzeigeschemas, lädt der Board-Server ebenfalls), `icons/` (Kennblöcke) und `ruestungs-baukasten/` (Bedrock-Texturen für Rüstung und Sammelobjekte) in denselben Ordner.
 
 ## Was drin ist
 
@@ -152,7 +152,8 @@ Rüstungs-Sets wie in den Vorlagen (`referenz/ruestung/`): je Teil **Vorlage + R
 
 Seit der Zusammenführung (Entscheidung von Max, 29.09.2026) ist das **Koordinaten-Board der Server der Companion**: Es liefert die Seite unter `/` aus, speichert alle Daten (`koordinaten-board/server/daten/daten.json`) und hält die Anzeige im Zimmer aktuell.
 
-- **Erkennung**: `init()` fragt `GET /api/server`. Antwortet das Board, läuft die Companion live, sonst (Datei, anderer Server, `?demo=1`) der DEMO-Mock.
+- **Adresse des Boards** (Umbau Phase 2): `konfig.js` setzt `window.COMPANION_KONFIG.apiAdresse`. Leer heißt: Das Board ist der Server, der die Seite ausliefert (`location.origin`). Auf Netlify steht dort die Adresse der API (`https://api.…`); dann gehen `API_BASIS`, Beitreten und der WebSocket dorthin, und das Board muss den Ursprung der Seite in `ERLAUBTE_URSPRUENGE` haben. Test: `tests/getrennt.test.mjs`.
+- **Erkennung**: `init()` fragt `GET <Board>/api/server`. Antwortet das Board, läuft die Companion live, sonst (Datei, kein Board, `?demo=1`) der DEMO-Mock.
 - **Anmeldung = Beitreten mit Account** (Strang B, B2): Das Handy scannt den QR-Code mit der Kamera-App und landet auf `/?pin=…`. Das Sheet „Beitreten“ hat die Board-PIN schon und zeigt die Accounts des Boards zum Antippen (`POST /api/beitreten/konten`). Man wählt seinen Account oder tippt einen neuen Namen, dazu die **eigene PIN** (4–8 Ziffern): Gibt es den Namen, meldet die PIN dort an (auch auf einem neuen Handy), sonst entsteht ein neuer Account. Das Token ist danach der Geräteschlüssel; `IDENTITAET.werBistDu()` (`GET /api/ich`) fragt beim Start, ob es noch gilt – Tokens von vor den Accounts gelten nicht mehr, dann heißt es einmal neu anmelden. Danach nimmt `api()` den Token aus `board.verbindung`; bei 401 oder abgelehntem Token geht es zurück zum Beitreten. Die PIN verschwindet aus der Adresszeile. „Abmelden“ im Board-Sheet.
 - **API**: dieselben Pfade wie im API-Vertrag, mit Präfix `/api` (Umsetzung `koordinaten-board/server/src/companion-api.js` + `daten.js`). Der Server prüft mit **derselben Datei `regeln.js`**, die die Seite lädt.
 - **Live-Updates**: Nach jeder Änderung meldet das Board `{ art:"geaendert", bereich, weltId }`. `liveAktualisieren()` lädt nur den betroffenen Bereich neu (Orte ohne Ansicht, Filter oder Kartenausschnitt zu verändern).
@@ -281,7 +282,7 @@ Live gelten alle Pfade mit Präfix `/api` und Bearer-Token. Die Texterkennung (`
 
 ## Tests
 
-`tests/` enthält Node-Tests für den Biom-Dekoder und Playwright-Tests für Banner, Portal-Verwaltung, Sammelobjekte, Kennblöcke in der Karte, Board-Verbindung, den Live-Betrieb am echten Board, die Anzeigeschemas, die Rüstung und den Welt-Import (`cd tests && npm install && npm test`, Details in `UEBERGABE.md`). Screenshots landen in `tests/bilder/`. Rüstung, Anzeigeschema, Welt-Import und Live laufen über http (`hilfen.mjs`: kleiner Server für den Ordner, three.js aus `node_modules` statt vom CDN, Chromium mit Software-WebGL).
+`tests/` enthält Node-Tests für den Biom-Dekoder und Playwright-Tests für Banner, Portal-Verwaltung, Sammelobjekte, Kennblöcke in der Karte, Board-Verbindung, den Live-Betrieb am echten Board, getrennte Ursprünge (Seite und Board auf verschiedenen Servern, `getrennt.test.mjs`), die Anzeigeschemas, die Rüstung und den Welt-Import (`cd tests && npm install && npm test`, Details in `UEBERGABE.md`). Screenshots landen in `tests/bilder/`. Rüstung, Anzeigeschema, Welt-Import und Live laufen über http (`hilfen.mjs`: kleiner Server für den Ordner, three.js aus `node_modules` statt vom CDN, Chromium mit Software-WebGL).
 
 ## Referenz
 

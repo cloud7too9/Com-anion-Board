@@ -46,6 +46,8 @@ npm run build
 npm start
 ```
 
+**Anzeige und Dashboard von einem anderen Server** (Umbau Phase 2): Beide lesen beim Bauen `VITE_API_URL` (z. B. `https://api.deinedomain.de`) für `fetch` und WebSocket; leer heißt eigener Ursprung. Die Companion liest ihre Board-Adresse aus `companion/konfig.js`. Der Server braucht dann den Ursprung der Seiten in `ERLAUBTE_URSPRUENGE`.
+
 **Widget-Dashboard** (in Arbeit, ersetzt später `/anzeige`): einmal `npm run dashboard:installieren && npm run dashboard:build`, dann mit demselben Anzeige-Link `http://…:3000/dashboard?anzeige=…&schluessel=…`.
 
 Die Konsole zeigt dann die Adresse für die Handys und die PIN. Einfacher: den QR-Code auf der Anzeige scannen – die PIN ist darin schon enthalten.
@@ -78,13 +80,14 @@ Ist ein Popup von Werbung verdeckt oder nicht aufgeklappt, meldet das Board „K
 
 ```bash
 npm run dev:server    # Server mit Auto-Neustart auf :3000
-npm run dev:client    # Vite auf :5173 (leitet /api, /ws, /medien an :3000 weiter)
+npm run dev:client    # Vite auf :5173 (leitet /api und /ws an :3000 weiter)
 npm test              # Server-Tests: Daten, Companion-API, Regeln, Erkennung, Karten, Netzwerk, PIN-Sperre
 ```
 
 Aufbau:
 ```
 server/src/server.js        Fastify: Beitritt, WebSocket, liefert Companion (/) und Anzeige (/anzeige) aus
+client/src/lib/api.ts       Adresse der API: VITE_API_URL beim Bauen (Netlify ↔ Pi, Umbau Phase 2), sonst eigener Ursprung
 server/src/daten.js         gemeinsame Daten (daten.json): Welten, Orte, Sammelobjekte, Banner, Rüstungs-Sets, Portale, Einstellungen
 server/src/companion-api.js REST-API der Companion unter /api (Vertrag: companion-prototyp.html, Abschnitt 4)
 server/src/regeln.js        lädt ../companion/regeln.js (und board-karten.js) per node:vm – dieselben Regeln wie am Handy
