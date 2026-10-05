@@ -2,7 +2,7 @@
   "name": "koordinaten-board",
   "version": "0.1.0",
   "private": true,
-  "description": "Lokales Minecraft-Koordinaten-Board: Anzeige im Raum, Eingabe per Handy, Seed-Map-Screenshots per OCR",
+  "description": "Koordinaten-Board: Server der Companion (API, SQLite, Live-Sync) und Anzeige im Raum",
   "scripts": {
     "installieren": "npm --prefix server install && npm --prefix client install",
     "build": "npm --prefix client run build",
