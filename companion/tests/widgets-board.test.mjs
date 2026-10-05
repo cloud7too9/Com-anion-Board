@@ -22,7 +22,7 @@ if (!existsSync(path.join(HIER, "../widgets/dist/index.html"))) {
 }
 
 const TMP = mkdtempSync(path.join(tmpdir(), "widgets-board-"));
-const PORT = 3186, PIN = "4711", BOARD = `http://127.0.0.1:${PORT}`;
+const PORT = 3186, PIN = "471100", BOARD = `http://127.0.0.1:${PORT}`;
 const AUSSEN = Object.values(networkInterfaces()).flat().find((n) => n && n.family === "IPv4" && !n.internal)?.address;
 const board = spawn(process.execPath, ["src/server.js"], {
   cwd: path.join(HIER, "../../koordinaten-board/server"),

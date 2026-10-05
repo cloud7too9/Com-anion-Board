@@ -22,7 +22,7 @@ const AUSSEN = Object.values(networkInterfaces()).flat().find((n) => n && n.fami
 if (!AUSSEN) { console.log("OK   übersprungen: keine Netzwerkadresse für den Zugriff „von außen“"); process.exit(0); }
 
 const TMP = mkdtempSync(path.join(tmpdir(), "anzeige-link-"));
-const PORT = 3189, PIN = "4711", BOARD = `http://127.0.0.1:${PORT}`;
+const PORT = 3189, PIN = "471100", BOARD = `http://127.0.0.1:${PORT}`;
 const board = spawn(process.execPath, ["src/server.js"], {
   cwd: path.join(HIER, "../../koordinaten-board/server"),
   env: { ...process.env, PORT: String(PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten"), OEFFENTLICHE_URL: `http://${AUSSEN}:${PORT}` },

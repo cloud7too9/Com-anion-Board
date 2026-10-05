@@ -16,7 +16,7 @@ mkdirSync(DIR, { recursive: true });
 const BOARD_ORDNER = path.join(HIER, "../../koordinaten-board");
 const { kartePruefen } = await import(pathToFileURL(path.join(BOARD_ORDNER, "server/src/zeigen.js")).href);
 const TMP = mkdtempSync(path.join(tmpdir(), "schema-test-"));
-const PORT = 3194, PIN = "4711", BOARD = `http://127.0.0.1:${PORT}`;
+const PORT = 3194, PIN = "471100", BOARD = `http://127.0.0.1:${PORT}`;
 if (!existsSync(path.join(BOARD_ORDNER, "client/dist/index.html"))) {
   console.log("FEHL Board-Client nicht gebaut: npm --prefix ../../koordinaten-board run build");
   process.exit(1);

@@ -12,7 +12,7 @@ const HIER = fileURLToPath(new URL(".", import.meta.url));
 const DIR = path.join(HIER, "bilder");
 mkdirSync(DIR, { recursive: true });
 const TMP = mkdtempSync(path.join(tmpdir(), "live-test-"));
-const PORT = 3195, PIN = "4711";
+const PORT = 3195, PIN = "471100";
 const BOARD = `http://127.0.0.1:${PORT}`;
 if (!existsSync(path.join(HIER, "../../koordinaten-board/client/dist/index.html"))) {
   console.log("FEHL Board-Client nicht gebaut: npm --prefix ../../koordinaten-board run build");
@@ -285,9 +285,10 @@ try {
   await lena.fill("#boardKontoPin", "9999");
   await lena.click('[data-aktion="board-beitreten"]');
   pruefe(await warteAuf(lena, () => document.getElementById("boardBanner")?.textContent.includes("Falsche PIN für Lena")), "Falsche eigene PIN wird gemeldet");
-  await lena.fill("#boardPin", "0000"); await lena.fill("#boardKontoPin", KONTO_PIN.Lena);
+  await lena.fill("#boardPin", "000000"); await lena.fill("#boardKontoPin", KONTO_PIN.Lena);   // falsche Board-PIN mit 6 Ziffern
   await lena.click('[data-aktion="board-beitreten"]');
   pruefe(await warteAuf(lena, () => document.getElementById("boardBanner")?.textContent.includes("Falsche PIN") && !document.getElementById("boardBanner")?.textContent.includes("für")), "Falsche Board-PIN wird gemeldet");
+  await schlafen(800);   // die Seite fragt die Accounts zur getippten Board-PIN mit 500 ms Verzögerung ab (→ 401 konten, unten erwartet)
   await lena.fill("#boardPin", PIN);
   await lena.click('[data-aktion="board-beitreten"]');
   pruefe(await warteAuf(lena, () => st.sheet === null && bd.verbindung?.name === "Lena" && bd.ich?.anzeigename === "Lena"), "Mit der richtigen PIN wieder angemeldet – derselbe Account");
@@ -299,8 +300,8 @@ try {
 
   pruefe(fehler.length === 0, `keine Fehler in der Konsole${fehler.length ? ": " + fehler.join(" | ") : ""}`);
   // erwartet: 7 Muster abgelehnt, Schildkröten-Stiefel abgelehnt, ungültiges Token (Prüfung mit werBistDu),
-  // falsche eigene PIN, Accounts mit falscher Board-PIN abgefragt, falsche Board-PIN
-  const erwartet = ["422 /api/banner", "422 /api/ruestung", "401 /api/ich", "401 /api/beitreten", "401 /api/beitreten/konten", "401 /api/beitreten"];
+  // falsche eigene PIN, falsche Board-PIN, danach (verzögert) Accounts mit der falschen Board-PIN abgefragt
+  const erwartet = ["422 /api/banner", "422 /api/ruestung", "401 /api/ich", "401 /api/beitreten", "401 /api/beitreten", "401 /api/beitreten/konten"];
   pruefe(JSON.stringify(antworten) === JSON.stringify(erwartet), `nur erwartete HTTP-Fehler: ${antworten.join(", ")}`);
 } catch (e) {
   pruefe(false, "Abbruch: " + e.message);

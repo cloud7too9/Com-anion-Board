@@ -22,7 +22,7 @@ for (const [datei, bauen] of [["../widgets/dist/index.html", "npm --prefix ../wi
 }
 
 const TMP = mkdtempSync(path.join(tmpdir(), "widgets-anordnen-"));
-const PORT = 3185, PIN = "4711", BOARD = `http://127.0.0.1:${PORT}`;
+const PORT = 3185, PIN = "471100", BOARD = `http://127.0.0.1:${PORT}`;
 const board = spawn(process.execPath, ["src/server.js"], {
   cwd: path.join(HIER, "../../koordinaten-board/server"),
   env: { ...process.env, PORT: String(PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten") },

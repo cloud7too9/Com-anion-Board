@@ -3634,7 +3634,7 @@ document.getElementById("portalWeltBtn").addEventListener("click", () => weltOef
 /* ============================================================================
    9f · BOARD-VERBINDUNG  ·  QR-Code der Anzeige scannen, beitreten, live halten
    ----------------------------------------------------------------------------
-   Das Koordinaten-Board zeigt einen QR-Code mit „http://<ip>:<port>/?pin=1234“.
+   Das Koordinaten-Board zeigt einen QR-Code mit „http://<ip>:<port>/?pin=123456“ (PIN: mindestens 6 Ziffern).
    Die Companion liest ihn (Kamera, Foto oder von Hand), tritt mit Name + PIN
    bei und hält danach die Live-Verbindung offen:
      POST <board>/api/beitreten  { pin, name }  → { token, name }
@@ -3677,12 +3677,12 @@ const bd = {
 };
 const adresseKurz = (a) => String(a || "").replace(/^https?:\/\//, "");
 
-/** Inhalt des Board-QR-Codes lesen: „http://192.168.8.184:3000/?pin=1234“ → { adresse, pin } */
+/** Inhalt des Board-QR-Codes lesen: „http://192.168.8.184:3000/?pin=123456“ → { adresse, pin } */
 function boardQrLesen(text){
   let url;
   try { url = new URL(String(text || "").trim()); } catch { return null; }
   const pin = url.searchParams.get("pin") || "";
-  if(!/^https?:$/.test(url.protocol) || !/^\d{4}$/.test(pin)) return null;
+  if(!/^https?:$/.test(url.protocol) || !/^\d{6,}$/.test(pin)) return null;
   return { adresse:url.origin, pin };
 }
 /** Adresse von Hand: „192.168.8.184“ oder „192.168.8.184:3000“ → „http://192.168.8.184:3000“ */
@@ -3845,6 +3845,7 @@ async function boardBeitreten(adresse, pin, name, kontoPin){
   return { verbindung:{ adresse, token:data.token, name:data.name }, neu:data.neu };
 }
 /** Accounts des Boards zum Auswählen (nur mit der Board-PIN) → Knöpfe über dem Namen */
+let boardPinTimer = null;
 async function boardKontenLaden(adresse, pin){
   bd.konten = [];
   try {
@@ -3883,7 +3884,7 @@ async function boardBeitretenKlick(){
   const name = document.getElementById("boardName").value.trim();
   const kontoPin = document.getElementById("boardKontoPin").value.trim();
   if(!adresse) return banner($b, "bad", "Adresse fehlt – QR-Code scannen oder eintragen.");
-  if(!/^\d{4}$/.test(pin)) return banner($b, "bad", "Die PIN hat 4 Ziffern und steht auf der Anzeige.");
+  if(!/^\d{6,}$/.test(pin)) return banner($b, "bad", "Die PIN hat mindestens 6 Ziffern und steht auf der Anzeige.");
   if(!name) return banner($b, "bad", "Wie heißt du? Der Name steht auf dem Board bei deinen Einträgen.");
   if(!/^\d{4,8}$/.test(kontoPin)) return banner($b, "bad", "Deine eigene PIN hat 4 bis 8 Ziffern – damit meldest du dich auch auf neuen Geräten an.");
   lsSchreiben("board.name", name);
@@ -4202,12 +4203,12 @@ function boardSheetRendern(){
       <div class="banner" id="boardBanner" hidden></div>
       <input type="hidden" id="boardAdresse" value="${esc(location.origin)}">
       <div class="field-group"><div class="field-group-label">PIN</div>
-        <input class="orte-eingabe mono" id="boardPin" inputmode="numeric" maxlength="4" autocomplete="one-time-code" placeholder="1234" value="${esc(pin)}"></div>
+        <input class="orte-eingabe mono" id="boardPin" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="123456" value="${esc(pin)}"></div>
       ${boardKontoHtml(name)}
       <div class="sheet-fuss"><button class="btn-primary" data-aktion="board-beitreten">Beitreten</button></div>
     </div>`);
     document.getElementById(pin ? "boardName" : "boardPin").focus();
-    if(/^\d{4}$/.test(pin)) boardKontenLaden(location.origin, pin);
+    if(/^\d{6,}$/.test(pin)) boardKontenLaden(location.origin, pin);
     boardKontoHinweis();
     return;
   }
@@ -4228,7 +4229,7 @@ function boardSheetRendern(){
         <label class="field"><span class="field-label">Adresse</span>
           <input id="boardAdresse" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="192.168.8.184:3000"></label>
         <label class="field"><span class="field-label">PIN</span>
-          <input id="boardPin" type="text" inputmode="numeric" maxlength="4" autocomplete="one-time-code" placeholder="1234"></label>
+          <input id="boardPin" type="text" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="123456"></label>
       </div></div>
     ${boardKontoHtml(name)}
     <div class="sheet-fuss"><button class="btn-primary" data-aktion="board-beitreten">Beitreten</button></div>
@@ -5275,16 +5276,18 @@ $sheet.addEventListener("input", (e) => {
   }
   if(t.id === "formNeu"){ form.neu = t.value; return; }
   if(t.id === "boardPin"){
-    t.value = t.value.replace(/\D/g, "").slice(0, 4);
-    // Mit vollständiger Board-PIN die Accounts zum Auswählen holen
+    t.value = t.value.replace(/\D/g, "").slice(0, 8);
+    // Mit vollständiger Board-PIN (mindestens 6 Ziffern) die Accounts zum Auswählen holen – kurz warten,
+    // falls die PIN länger ist, sonst zählte jede Zwischenstufe als Fehlversuch (Sperre)
     const adresse = DEMO.enabled ? (boardQrLesen(document.getElementById("boardAdresse").value)?.adresse || boardAdresseLesen(document.getElementById("boardAdresse").value)) : location.origin;
-    if(t.value.length === 4 && adresse) boardKontenLaden(adresse, t.value);
+    clearTimeout(boardPinTimer);
+    if(t.value.length >= 6 && adresse) boardPinTimer = setTimeout(() => boardKontenLaden(adresse, t.value), 500);
     return;
   }
   if(t.id === "boardKontoPin"){ t.value = t.value.replace(/\D/g, "").slice(0, 8); return; }
   if(t.id === "boardName"){ boardKontoHinweis(); return; }
   if(t.id === "boardAdresse"){
-    // Ganze Beitritts-Adresse eingefügt („…/?pin=1234“) → in Adresse und PIN aufteilen
+    // Ganze Beitritts-Adresse eingefügt („…/?pin=123456“) → in Adresse und PIN aufteilen
     const qr = boardQrLesen(t.value);
     if(qr){ t.value = adresseKurz(qr.adresse); document.getElementById("boardPin").value = qr.pin; }
     return;

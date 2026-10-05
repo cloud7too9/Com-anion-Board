@@ -14,7 +14,7 @@ const HIER = fileURLToPath(new URL(".", import.meta.url));
 const DIR = path.join(HIER, "bilder");
 mkdirSync(DIR, { recursive: true });
 const TMP = mkdtempSync(path.join(tmpdir(), "board-test-"));
-const BOARD_PORT = 3198, SEITE_PORT = 3196, PIN = "4711";
+const BOARD_PORT = 3198, SEITE_PORT = 3196, PIN = "471100";
 const BOARD = `http://127.0.0.1:${BOARD_PORT}`;
 const QR_TEXT = `${BOARD}/?pin=${PIN}`;
 const JSQR = path.join(HIER, "node_modules/jsqr/dist/jsQR.js");
@@ -199,7 +199,7 @@ try {
     // Foto – Name leer → Felder füllen, aber noch nicht beitreten
     await p.fill("#boardName", "");
     await p.setInputFiles("#boardFoto", QR_PNG);
-    pruefe(await warteAuf(p, () => document.getElementById("boardPin")?.value === "4711"), "Foto: Adresse und PIN erkannt");
+    pruefe(await warteAuf(p, () => document.getElementById("boardPin")?.value === "471100"), "Foto: Adresse und PIN erkannt");
     pruefe(await p.$eval("#boardAdresse", (e) => e.value) === "127.0.0.1:3198", "Foto: Adresse eingetragen");
     pruefe((await knopfText(p)).includes("Nicht verbunden"), "Ohne Name noch nicht beigetreten");
     await p.click('[data-aktion="board-beitreten"]'); await p.waitForTimeout(200);
@@ -210,7 +210,7 @@ try {
     await p.click('[data-aktion="board-beitreten"]'); await p.waitForTimeout(200);
     pruefe((await text(p, "#boardBanner")).includes("Deine eigene PIN hat 4 bis 8 Ziffern"), "Ohne eigene PIN → Hinweis");
     await p.fill("#boardKontoPin", "1357");
-    await p.fill("#boardPin", "1111");
+    await p.fill("#boardPin", "111111");   // falsche Board-PIN mit 6 Ziffern, sonst meckert die Seite selbst
     await p.click('[data-aktion="board-beitreten"]');
     pruefe(await warteAuf(p, () => document.getElementById("boardBanner")?.textContent.includes("Falsche PIN")), "Falsche PIN → Fehlermeldung vom Board");
 

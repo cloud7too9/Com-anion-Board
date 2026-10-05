@@ -248,15 +248,15 @@ try {
   const PORT = 3190, BOARD = `http://127.0.0.1:${PORT}`;
   board = spawn(process.execPath, ["src/server.js"], {
     cwd: path.join(HIER, "../../koordinaten-board/server"),
-    env: { ...process.env, PORT: String(PORT), RAUM_PIN: "4711", DATEN_ORDNER: path.join(tmp, "daten") }, stdio: "ignore",
+    env: { ...process.env, PORT: String(PORT), RAUM_PIN: "471100", DATEN_ORDNER: path.join(tmp, "daten") }, stdio: "ignore",
   });
   for (let i = 0; i < 60; i++) { try { if ((await fetch(`${BOARD}/api/server`)).ok) break; } catch {} await schlafen(200); }
   const token = (await (await fetch(`${BOARD}/api/beitreten`, { method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ pin: "4711", name: "Tim", kontoPin: "9753" }) })).json()).token;
+    body: JSON.stringify({ pin: "471100", name: "Tim", kontoPin: "9753" }) })).json()).token;
   const welt = (await (await fetch(`${BOARD}/api/orte/welten`, { method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ seed: SEED }) })).json()).welt;
   const beitreten = async (q, name) => {
-    await q.goto(`${BOARD}/?pin=4711`);
+    await q.goto(`${BOARD}/?pin=471100`);
     await q.waitForSelector("#boardName"); await q.fill("#boardName", name); await q.fill("#boardKontoPin", "2468");
     await q.click('[data-aktion="board-beitreten"]');
     return warteAuf(q, () => !DEMO.enabled && bd.verbindung?.name && st.welt && bm.weltId === st.weltId);

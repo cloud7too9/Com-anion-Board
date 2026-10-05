@@ -2,7 +2,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir, networkInterfaces } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +16,7 @@ let server;
 async function starten() {
   server = spawn(process.execPath, ['src/server.js'], {
     cwd: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
-    env: { ...process.env, PORT: String(PORT), DATEN_ORDNER: ORDNER, RAUM_PIN: '4711', ERLAUBTE_URSPRUENGE: 'https://board.beispiel.de, http://localhost:5173' },
+    env: { ...process.env, PORT: String(PORT), DATEN_ORDNER: ORDNER, RAUM_PIN: '471100', ERLAUBTE_URSPRUENGE: 'https://board.beispiel.de, http://localhost:5173' },
     stdio: 'ignore',
   });
   for (let i = 0; i < 50; i += 1) {
@@ -39,7 +39,7 @@ const anfrage = async (methode, pfad, token, body) => {
   return { status: res.status, daten: await res.json() };
 };
 // Account anlegen oder – wenn es den Namen gibt – mit derselben PIN anmelden (B2)
-const beitreten = async (name) => (await anfrage('POST', '/api/beitreten', null, { pin: '4711', name, kontoPin: '2468' })).daten.token;
+const beitreten = async (name) => (await anfrage('POST', '/api/beitreten', null, { pin: '471100', name, kontoPin: '2468' })).daten.token;
 
 test('ohne Anmeldung kein Zugriff', async () => {
   assert.deepEqual((await anfrage('GET', '/api/server')).daten, { name: 'koordinaten-board' });
@@ -51,16 +51,16 @@ test('ohne Anmeldung kein Zugriff', async () => {
 test('Accounts mit PIN: Konten nur mit Board-PIN, anlegen, anmelden, Ersteller an Einträgen', async () => {
   let r = await anfrage('POST', '/api/beitreten/konten', null, { pin: '0000' });
   assert.equal(r.status, 401);
-  r = await anfrage('POST', '/api/beitreten', null, { pin: '4711', name: 'Tim', kontoPin: '9753' });
+  r = await anfrage('POST', '/api/beitreten', null, { pin: '471100', name: 'Tim', kontoPin: '9753' });
   assert.deepEqual([r.status, r.daten.neu, r.daten.name], [200, true, 'Tim']);
   const tim = r.daten;
-  assert.ok((await anfrage('POST', '/api/beitreten/konten', null, { pin: '4711' })).daten.konten.some((k) => k.id === tim.id && k.name === 'Tim'));
+  assert.ok((await anfrage('POST', '/api/beitreten/konten', null, { pin: '471100' })).daten.konten.some((k) => k.id === tim.id && k.name === 'Tim'));
   const ich = (await anfrage('GET', '/api/ich', tim.token)).daten;
   assert.deepEqual([ich.id, ich.name], [tim.id, 'Tim']);
-  r = await anfrage('POST', '/api/beitreten', null, { pin: '4711', name: 'tim', kontoPin: '1111' });
+  r = await anfrage('POST', '/api/beitreten', null, { pin: '471100', name: 'tim', kontoPin: '1111' });
   assert.deepEqual([r.status, r.daten.fehler], [401, 'Falsche PIN für Tim']);
-  assert.equal((await anfrage('POST', '/api/beitreten', null, { pin: '4711', name: 'Tim', kontoPin: '9753' })).daten.neu, false);
-  assert.equal((await anfrage('POST', '/api/beitreten', null, { pin: '4711', name: 'Tim' })).status, 400, 'ohne eigene PIN');
+  assert.equal((await anfrage('POST', '/api/beitreten', null, { pin: '471100', name: 'Tim', kontoPin: '9753' })).daten.neu, false);
+  assert.equal((await anfrage('POST', '/api/beitreten', null, { pin: '471100', name: 'Tim' })).status, 400, 'ohne eigene PIN');
   // Einträge tragen die Benutzer-ID, der Name bleibt zur Anzeige
   const b = (await anfrage('POST', '/api/banner', tim.token, { name: 'Tims Banner', basis: 'white', ebenen: [] })).daten.banner;
   assert.deepEqual([b.von, b.erstellerId], ['Tim', tim.id]);
@@ -340,6 +340,28 @@ test('CORS: nur erlaubte Ursprünge und der eigene, alle Methoden, auch für /ws
   assert.equal(await ws(BASIS), 'offen', 'eigener Ursprung');
 });
 
+test('Board-PIN hat mindestens 6 Ziffern: kurze RAUM_PIN lehnt der Start ab, alte 4-stellige pin.txt wird ersetzt', async () => {
+  const cwd = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const ordner = mkdtempSync(path.join(tmpdir(), 'kb-pin-'));
+  const start = (env) => new Promise((ok) => {
+    const p = spawn(process.execPath, ['src/server.js'], { cwd, env: { ...process.env, PORT: '3298', DATEN_ORDNER: ordner, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    let aus = '';
+    p.stdout.on('data', (d) => { aus += d; });
+    p.stderr.on('data', (d) => { aus += d; });
+    p.stdout.on('data', (d) => { if (String(d).includes('läuft')) p.kill('SIGTERM'); });
+    p.once('exit', (code) => ok({ code, aus }));
+  });
+  let r = await start({ RAUM_PIN: '4711' });
+  assert.equal(r.code, 1);
+  assert.match(r.aus, /mindestens 6 Ziffern/);
+  writeFileSync(path.join(ordner, 'pin.txt'), '1234');
+  r = await start({});
+  assert.equal(r.code, 0);
+  assert.match(r.aus, /neue PIN mit 6 Ziffern/);
+  assert.match(readFileSync(path.join(ordner, 'pin.txt'), 'utf8'), /^\d{6}$/, 'pin.txt hat jetzt 6 Ziffern');
+  rmSync(ordner, { recursive: true, force: true });
+});
+
 test('PIN-Sperre hinter dem Tunnel: CF-Connecting-IP von loopback zählt als Adresse, je Adresse eigene Sperre', async () => {
   const falsch = (ip) => fetch(`${BASIS}/api/beitreten/konten`, { method: 'POST',
     headers: { 'content-type': 'application/json', ...(ip && { 'cf-connecting-ip': ip }) }, body: JSON.stringify({ pin: '0000' }) });
@@ -347,7 +369,7 @@ test('PIN-Sperre hinter dem Tunnel: CF-Connecting-IP von loopback zählt als Adr
   assert.equal((await falsch('203.0.113.5')).status, 429, 'nach 5 Fehlversuchen gesperrt');
   assert.equal((await falsch('203.0.113.6')).status, 401, 'andere Adresse hinter dem Tunnel: eigene Zählung');
   assert.equal((await fetch(`${BASIS}/api/beitreten/konten`, { method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ pin: '4711' }) })).status, 200, 'ohne Header (direkt, 127.0.0.1) nicht mitgesperrt');
+    body: JSON.stringify({ pin: '471100' }) })).status, 200, 'ohne Header (direkt, 127.0.0.1) nicht mitgesperrt');
 });
 
 test('Rüstungs-Baukasten wird ausgeliefert (Texturen, Module, Manifest)', async () => {

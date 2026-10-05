@@ -10,7 +10,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Daten, DatenFehler } from './daten.js';
-import { identitaet, AnmeldeFehler } from './identitaet.js';
+import { identitaet, AnmeldeFehler, BOARD_PIN } from './identitaet.js';
 import { companionApi } from './companion-api.js';
 import { anzeigeSicht } from './sicht.js';
 import { COMPANION_ORDNER } from './regeln.js';
@@ -47,7 +47,18 @@ async function dauerwertLaden(datei, erzeugen) {
 }
 
 await mkdir(DATEN, { recursive: true });
-const PIN = process.env.RAUM_PIN ?? (await dauerwertLaden('pin.txt', () => String(randomInt(1000, 10000))));
+// Board-PIN: mindestens 6 Ziffern (BOARD_PIN). Eine alte 4-stellige pin.txt wird ersetzt, eine zu kurze RAUM_PIN abgelehnt.
+if (process.env.RAUM_PIN !== undefined && !BOARD_PIN.test(process.env.RAUM_PIN)) {
+  console.error(`RAUM_PIN „${process.env.RAUM_PIN}“ geht nicht: Die Board-PIN hat mindestens 6 Ziffern.`);
+  process.exit(1);
+}
+const neuePin = () => String(randomInt(100000, 1000000));
+let PIN = process.env.RAUM_PIN ?? (await dauerwertLaden('pin.txt', neuePin));
+if (!BOARD_PIN.test(PIN)) {
+  PIN = neuePin();
+  await writeFile(path.join(DATEN, 'pin.txt'), PIN);
+  console.log(`  Die alte PIN in pin.txt war zu kurz – neue PIN mit 6 Ziffern: ${PIN}`);
+}
 const GEHEIM = await dauerwertLaden('geheim.txt', () => randomBytes(32).toString('hex'));
 
 /** Kommt die Verbindung vom Gerät selbst (loopback)? Gibt keine Rechte mehr; dort sitzt hinter dem Tunnel cloudflared. */
