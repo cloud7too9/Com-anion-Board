@@ -89,7 +89,7 @@ Danach: Weltname und Seed bestätigen → **Biome lesen** (Fortschritt, Abbreche
 - **Prüfskript** `tools/welt-pruefen.mjs`: Weltname, Seed, Version, Chunks je Dimension, Ausdehnung, häufigste Biome, unbekannte IDs mit Beispielkoordinate, Laufzeit und Spitzenspeicher je Weg, PNG je Dimension nach `tests/bilder/` (1 Pixel = 1 Chunk, unbekannt rot). `--punkt x,z` zeigt die Höhenkarte in beiden Lesarten – zum Abgleich mit der Y-Anzeige im Spiel.
 - **Tests**: `node --test biom-dekoder.test.mjs` (Dekoder, Aufbauprüfung, synthetische Welten aus `tests/welt-bauen.mjs`, Fixture-Welt von Max) und `node karte-mcworld.test.mjs` (Playwright: DEMO über http, als Datei, live am echten Board).
 - **Phase 1 abgeschlossen** (29.09.2026, an der Fixture-Welt von Max `tests/daten/fixture-seed.mcworld`, Bedrock 1.26.51): Höhenkarte `z*16 + x` an seiner Stelle bestätigt, 8 von 8 Chunkbase-Stichproben passen, ID 195 = Dappled Forest.
-- **Noch offen**: die Realm-Welt am iPhone (Laufzeit und Speicher; nur nach `tests/daten/privat/`, steht in `.gitignore`) und die IDs von Cherry Grove, Pale Garden und Sulfur Caves, bis eine Welt sie enthält.
+- **Noch offen**: die Realm-Welt am iPhone (Laufzeit und Speicher; nur nach `tests/daten/privat/`, steht in `.gitignore`). Die Biom-IDs sind vollständig: `biom-ids.js` entsteht aus Mojangs `mojang-biomes.json` (IDs, Kopie in `tools/`) und minecraft-data (Namen, Farben); Cherry Grove 192, Pale Garden 193, Sulfur Caves 194, Dappled Forest 195.
 
 ## Sammelobjekte
 

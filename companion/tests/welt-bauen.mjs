@@ -199,7 +199,7 @@ export function zipBauen(dateien) {
 // ---------- Die Testwelt ----------
 
 export const SEED = "6889192652397090698";
-export const ID = { ozean: 0, ebene: 1, wueste: 2, wald: 4, fluss: 7, nether: 8, end: 9, pilz: 14, seelensand: 178, tiefeDunkelheit: 190, UNBEKANNT: 192 };
+export const ID = { ozean: 0, ebene: 1, wueste: 2, wald: 4, fluss: 7, nether: 8, end: 9, pilz: 14, seelensand: 178, tiefeDunkelheit: 190, UNBEKANNT: 250 };
 
 /** Biom je Chunk, wie es die Testwelt am Ende enthalten soll (vor Überschreiben und Löschen: alt) */
 function oberweltBiom(cx) { return cx < -20 ? ID.ozean : cx < 0 ? ID.ebene : cx < 20 ? ID.wald : ID.wueste; }
@@ -218,7 +218,7 @@ function oberweltData3d(id, { mischung = null } = {}) {
 /**
  * Baut die Standard-Testwelt. Aufbau:
  *   000013.ldb  Level 1, ältere Daten: alle Oberwelt-Chunks cx −40…39, cz −8…7
- *   000011.ldb  Level 0, neuere Daten: (1,1) → Pilzland, Nether und End, unbekanntes Biom 192 bei cx 30, cz 0…2
+ *   000011.ldb  Level 0, neuere Daten: (1,1) → Pilzland, Nether und End, unbekanntes Biom 250 bei cx 30, cz 0…2
  *   000008.ldb  laut MANIFEST gelöscht: (0,0) → Wüste (darf nicht ankommen)
  *   000014.log  am neuesten: (2,2) → Fluss, (3,3) gelöscht, Textschlüssel als Fehlalarme
  * optionen: ordner (Präfix im ZIP, z. B. „Meine Welt/“ wie von Hand gezippt am iPhone),

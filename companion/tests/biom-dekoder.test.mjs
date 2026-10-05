@@ -145,10 +145,10 @@ test("Kacheln: Wert = ID + 1, 0 = unerkundet, Base64 genau 2048 Byte", () => {
 
 test("Unbekannte IDs: gezählt, mit Beispielkoordinate (Blockmitte des Chunks)", () => {
   const { chunks, unbekannt } = chunksAuswerten([
-    { dim: "overworld", cx: 2, cz: -1, id: 192 }, { dim: "overworld", cx: 3, cz: -1, id: 192 }, { dim: "end", cx: 0, cz: 0, id: 9 },
+    { dim: "overworld", cx: 2, cz: -1, id: 250 }, { dim: "overworld", cx: 3, cz: -1, id: 250 }, { dim: "end", cx: 0, cz: 0, id: 9 },
   ], BEKANNT);
   assert.deepEqual(chunks, { overworld: 2, nether: 0, end: 1 });
-  assert.deepEqual(unbekannt, [{ bedrockId: 192, chunks: 2, beispiel: { dim: "overworld", x: 40, z: -8 } }]);
+  assert.deepEqual(unbekannt, [{ bedrockId: 250, chunks: 2, beispiel: { dim: "overworld", x: 40, z: -8 } }]);
 });
 
 // ---------- Ganze Welten ----------
@@ -170,7 +170,7 @@ test("Testwelt: Streaming liefert genau die erwarteten Biome", async () => {
   const r = await weltLesen(blob(zip), { biomIds: BEKANNT, fortschritt: (f) => fortschritt.push(f.phase) });
   assert.deepEqual({ ...r.meta, unbekannt: undefined },
     { seed: SEED, weltname: "Testwelt", spielversion: "1.26.50", chunks: { overworld: 1279, nether: 24, end: 2 }, unbekannt: undefined });
-  assert.deepEqual(r.meta.unbekannt, [{ bedrockId: 192, chunks: 3, beispiel: { dim: "overworld", x: 488, z: 8 } }]);
+  assert.deepEqual(r.meta.unbekannt, [{ bedrockId: 250, chunks: 3, beispiel: { dim: "overworld", x: 488, z: 8 } }]);
   const gelesen = ausKacheln(r.kacheln);
   assert.equal(gelesen.size, erwartet.size);
   for (const [k, id] of erwartet) assert.equal(gelesen.get(k), id, k);

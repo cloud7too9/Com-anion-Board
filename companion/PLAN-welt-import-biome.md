@@ -2,7 +2,7 @@
 
 > Für Claude Code · Repo `companion-orte` · Datei `companion-prototyp.html` · Stand 29.09.2026
 >
-> **Stand 01.10.2026:** Phasen 1–6 gebaut (Branch `bereich/karte-mcworld`, dann `bereich/karte-welt-upload` zusammen mit Strang C aus `../planung/PLAN.md`). Abweichungen: Upload als `.zip` aus der Dateien-App mit Aufbauprüfung und Anleitung (Strang C); der Worker schickt die Kacheln als Base64; der Mock erzeugt seine Biome (`demoBiome()`) statt Kacheln aus der Fixture-Welt; das Board speichert je Welt in `biome/<weltId>.json`. **Phase 1 ist an der Fixture-Welt von Max abgeschlossen** (Ergebnis bei Phase 1 in Kapitel 7). Offen bleiben die Realm-Welt am iPhone und die IDs von Cherry Grove, Pale Garden und Sulfur Caves.
+> **Stand 01.10.2026:** Phasen 1–6 gebaut (Branch `bereich/karte-mcworld`, dann `bereich/karte-welt-upload` zusammen mit Strang C aus `../planung/PLAN.md`). Abweichungen: Upload als `.zip` aus der Dateien-App mit Aufbauprüfung und Anleitung (Strang C); der Worker schickt die Kacheln als Base64; der Mock erzeugt seine Biome (`demoBiome()`) statt Kacheln aus der Fixture-Welt; das Board speichert je Welt in `biome/<weltId>.json`. **Phase 1 ist an der Fixture-Welt von Max abgeschlossen** (Ergebnis bei Phase 1 in Kapitel 7). Offen bleibt die Realm-Welt am iPhone; die IDs von Cherry Grove, Pale Garden und Sulfur Caves sind seit 05.10.2026 aus Mojangs eigener Liste eingetragen (Kapitel 3.6).
 
 ---
 
@@ -118,9 +118,9 @@ Dafür einen kleinen eigenen NBT-Leser schreiben (nur lesen; alle 13 Tag-Typen �
 
 - ✔ `minecraft-data` → `data/bedrock/1.20.0/biomes.json` enthält die echten gespeicherten IDs 0–191, z. B. `ocean 0`, `plains 1`, `river 7`, `ice_plains_spikes 140`, `soulsand_valley 178`, `deep_dark 190`, `mangrove_swamp 191`. Das Feld `displayName` entspricht der Chunkbase-Schreibweise („Ice Spikes“, „Badlands“, „Dark Forest“, „Windswept Hills“), dazu gibt es `color`.
 - ✔ **Nicht** `bedrock/1.21.60/biomes.json` verwenden. Dort sind die IDs alphabetisch durchnummeriert (`plains 64`) und passen nicht zu den gespeicherten Daten.
-- ⚠ Neuere Biome fehlen in 1.20.0: Cherry Grove (vermutlich 192), Pale Garden (vermutlich 193), Dappled Forest (195 laut BedrockMapper), Sulfur Caves (unbekannt). In Phase 1 an der Testwelt bestätigen.
+- ✔ Neuere Biome fehlen in 1.20.0. Verbindliche Quelle für alle IDs ist Mojangs `mojang-biomes.json` aus [bedrock-samples](https://github.com/Mojang/bedrock-samples) (`metadata/vanilladata_modules/`, Stand 1.26.50.4, Kopie in `tools/`): **192 = Cherry Grove, 193 = Pale Garden, 194 = Sulfur Caves, 195 = Dappled Forest**. Alle 86 IDs aus minecraft-data stimmen damit überein; `tools/biom-ids-bauen.mjs` prüft das bei jedem Lauf. PyMCTranslate (`bedrock_26_50/__biome_data__.json`) nennt dieselben Werte.
   - ✔ **195 = Dappled Forest**: Fixture-Welt, 24 von 30 Chunks, Spawn X 0 / Z 0 (Herbstwald mit roten und orangen Blättern); Max hat den Namen in Chunkbase bestätigt. Nachgetragen in `tools/biom-ids-bauen.mjs`.
-  - ⚠ Cherry Grove, Pale Garden, Sulfur Caves kommen in der Fixture-Welt nicht vor – bleiben offen, bis eine Welt sie enthält (der Import meldet sie als unbekannt).
+  - ✔ Cherry Grove, Pale Garden, Sulfur Caves kommen in der Fixture-Welt nicht vor; ihre IDs stehen seit 05.10.2026 aus Mojangs Liste in `biom-ids.js`. Als unbekannte ID nutzen die Tests jetzt 250.
 - Zuordnung zur bestehenden Biom-Liste in STAMMDATEN über den Anzeigenamen. Farbe aus der Biom-Liste, sonst `color` aus minecraft-data.
 - Die Tabelle wird einmal per Skript erzeugt und eingecheckt, nicht zur Laufzeit geladen.
 
@@ -341,7 +341,7 @@ An Max: Zahlen, PNGs, Liste der unbekannten IDs.
 **Ergebnis Phase 1 (29.09.2026):**
 1. ✔ Höhenkarte: `z*16 + x`, erste Luft über −64 (siehe 3.4).
 2. ✔ Chunkbase: alle 8 Stichproben passen (Dappled Forest, Stony Shore, Snowy Slopes, Plains, Cold Ocean).
-3. ✔ ID 195 = Dappled Forest nachgetragen; Cherry Grove, Pale Garden, Sulfur Caves weiter offen.
+3. ✔ ID 195 = Dappled Forest nachgetragen; Cherry Grove (192), Pale Garden (193), Sulfur Caves (194) am 05.10.2026 aus Mojangs Liste ergänzt.
 4. Laufzeit/Speicher: Fixture-Welt 0,1 s und ~70 MB (beide Wege). Synthetische Welt mit 152 MB: Streaming 134 MB Spitzenspeicher, `readMcworld()` 529 MB, je ~4,5 s. Die Realm-Welt testet Max in Phase 2 am iPhone.
 
 Commit: `Biom-Dekoder für .mcworld mit Prüfskript und Tests`

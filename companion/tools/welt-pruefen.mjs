@@ -20,7 +20,6 @@ import "../biom-ids.js";
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
 const BIOME = new Map(globalThis.BIOM_IDS.map((b) => [b.id, b]));
-const VERMUTET = { 192: "Cherry Grove", 193: "Pale Garden" };   // aus dem Bauplan, unbestätigt
 const DIM_NAME = { overworld: "Oberwelt", nether: "Nether", end: "End" };
 const zahl = (n) => n.toLocaleString("de-DE");
 const UNBEKANNT_FARBE = "#ff0000";   // kein Biom in biom-ids.js hat diese Farbe (Pilzland ist Magenta)
@@ -109,7 +108,7 @@ for (const dim of DIMENSIONEN) {
   const zaehler = new Map();
   for (const c of liste) zaehler.set(c.id, (zaehler.get(c.id) || 0) + 1);
   [...zaehler].sort((a, b) => b[1] - a[1]).slice(0, 15).forEach(([id, n], i) => {
-    const name = BIOME.get(id)?.displayName ?? `unbekannt${VERMUTET[id] ? ` (vermutlich ${VERMUTET[id]})` : ""}`;
+    const name = BIOME.get(id)?.displayName ?? "unbekannt";
     console.log(`  ${String(i + 1).padStart(2)}. ${`${name} (${id})`.padEnd(34)} ${zahl(n).padStart(7)} Chunks ${String(Math.round(n / liste.length * 100)).padStart(3)} %`);
   });
   // PNG, 1 Pixel = 1 Chunk
