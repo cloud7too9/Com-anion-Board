@@ -24,6 +24,10 @@ Zwei Projekte für eine gemeinsame Minecraft-Welt im Raum – seit dem 29.09.202
 - Beide nutzen dieselbe Optik (Dimensions-Themes aus `modul-a-live-karte.html`) und dieselben Seed-Map-Screenshots als Grundlage.
 - `modul-a-live-karte.html`, die Hauptdatei der Companion-PWA, liegt **nicht** in diesem Repo. Max pflegt sie selbst; das Board kann sie später statt des Prototyps ausliefern (`COMPANION_DATEI`).
 
+## Netlify (Umbau Phase 5)
+
+`netlify.toml` baut die Seite aus diesem Repo: Anzeige unter `/`, Companion-PWA unter `/app/`, Widget-Dashboard unter `/dashboard/` (`netlify/bauen.sh`, Routen in `netlify/_redirects`). In Netlify: Site aus dem GitHub-Repo anlegen (Branch `main`), unter *Site configuration → Environment variables* `API_URL` auf die Adresse der API setzen (`https://api.deinedomain.de`; ohne sie laufen die Seiten im DEMO-/Beispiel-Modus). Der Build wird lokal geprüft: `companion/tests/netlify.test.mjs`. Schritte für Domain, Tunnel und Pi: [`koordinaten-board/pi/ANLEITUNG.md`](koordinaten-board/pi/ANLEITUNG.md).
+
 ## Schnellstart
 
 ```bash

@@ -1,0 +1,17 @@
+{
+  "name": "Minecraft Companion",
+  "short_name": "Companion",
+  "description": "Karte, Sammelobjekte, Portale, Banner und Rüstung für unsere Minecraft-Welt – mit dem Koordinaten-Board im Zimmer",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0f13",
+  "theme_color": "#0d0f13",
+  "icons": [
+    { "src": "icons/app/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/app/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,6 @@
+# Routen der Anzeige (React, eigene Pfade) und des Dashboards (eigene Routen wie /dashboard/vollbild/…) → ihre index.html
+/anzeige        /index.html            200
+/anzeige/*      /index.html            200
+/dashboard      /dashboard/            301
+/dashboard/*    /dashboard/index.html  200
+/app            /app/                  301
