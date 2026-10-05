@@ -18,13 +18,12 @@ rm -rf "$ZIEL"
 mkdir -p "$ZIEL"
 
 # Anzeige unter /
-( cd koordinaten-board/client && [ -n "${OHNE_INSTALL:-}" ] || npm ci --no-audit --no-fund; VITE_API_URL="$API_URL" npm run build )
-cp -r koordinaten-board/client/dist/. "$ZIEL/"
+# Eigene Ausgabeordner, damit die dist/ der Projekte (das Board liefert sie lokal aus) unberührt bleiben
+( cd koordinaten-board/client && [ -n "${OHNE_INSTALL:-}" ] || npm ci --no-audit --no-fund; VITE_API_URL="$API_URL" npm run build -- --outDir "$ZIEL/.anzeige" --emptyOutDir )
+cp -r "$ZIEL/.anzeige/." "$ZIEL/" && rm -rf "$ZIEL/.anzeige"
 
 # Widget-Dashboard unter /dashboard/
-( cd companion/widgets && [ -n "${OHNE_INSTALL:-}" ] || npm ci --no-audit --no-fund; VITE_API_URL="$API_URL" npm run build )
-mkdir -p "$ZIEL/dashboard"
-cp -r companion/widgets/dist/. "$ZIEL/dashboard/"
+( cd companion/widgets && [ -n "${OHNE_INSTALL:-}" ] || npm ci --no-audit --no-fund; VITE_API_URL="$API_URL" npm run build -- --outDir "$ZIEL/dashboard" --emptyOutDir )
 
 # Companion unter /app/: Seite als index.html, dazu Regeln, Texterkennung, Welt-Import, Icons, Baukasten, Bibliotheken
 mkdir -p "$ZIEL/app"
