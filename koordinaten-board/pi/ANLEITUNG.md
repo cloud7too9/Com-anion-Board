@@ -49,6 +49,7 @@ sudo nano /etc/companion-board.env                 # Domain eintragen; fürs Hei
 sudo systemctl daemon-reload
 sudo systemctl enable --now companion-board
 sudo journalctl -u companion-board -f              # Konsole: PIN, Anzeige-Link, „daten.json nach daten.db übernommen“
+                                                   # Die Warnung „widgets/dist must exist“ ist harmlos: das Dashboard kommt von Netlify
 ```
 
 **Daten vom Laptop mitnehmen:** `koordinaten-board/server/daten/` vom Laptop (daten.json oder schon daten.db, dazu `pin.txt`, `geheim.txt`, `biome/`) nach `/var/lib/companion-board/` kopieren, bevor der Dienst das erste Mal startet; `sudo chown -R board:board /var/lib/companion-board`. Eine `daten.json` übernimmt der Server beim ersten Start selbst nach `daten.db`.
@@ -106,6 +107,17 @@ sudo nano /etc/companion-board.env                 # HOST=127.0.0.1, OEFFENTLICH
 sudo systemctl restart companion-board
 curl https://api.deinedomain.de/api/server         # → {"name":"koordinaten-board"}
 ```
+
+**Tunnel stirbt sofort mit „Couldn't resolve SRV record … region1.v2.argotunnel.com … no such host“:** Der Router (z. B. Vodafone GigaCube) beantwortet SRV-Abfragen nicht. Dann fragt der Pi direkt Cloudflare oder Google als DNS:
+
+```bash
+nmcli -t -f NAME,DEVICE con show --active            # Name der WLAN-Verbindung, z. B. netplan-wlan0-gigacube-2E8C
+sudo nmcli con mod "<NAME>" ipv4.dns "1.1.1.1 8.8.8.8" ipv4.ignore-auto-dns yes
+sudo nmcli con up "<NAME>"                           # WLAN kommt nach ein paar Sekunden wieder
+sudo systemctl restart cloudflared
+```
+
+Taucht nach einem Neustart wieder der Router als DNS auf, in `/etc/netplan/90-NM-*.yaml` unter `wlan0` eintragen: `nameservers: { addresses: [1.1.1.1, 8.8.8.8] }` und `dhcp4-overrides: { use-dns: false }`, dann `sudo netplan apply`.
 
 Der Tunnel baut die Verbindung vom Pi nach außen auf: Am Router (bei deiner Mutter oder in der neuen Wohnung) muss nichts freigegeben werden, und ein Umzug ändert nichts an der Adresse.
 
