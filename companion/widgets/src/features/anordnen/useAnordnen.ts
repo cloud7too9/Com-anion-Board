@@ -3,6 +3,7 @@ import { useBoardStore, type AnzeigeLayout } from "../karten/model/board.store";
 import { useWorkspaceStore } from "../workspace/model/workspace.store";
 import type { WorkspaceData } from "../workspace/model/workspace.types";
 import { STANDARD_REIHEN } from "../workspace/lib/raster";
+import { apiUrl } from "@/features/karten/lib/api";
 
 /** Antwort von GET/PUT /api/anzeigen/:id/layout */
 interface LayoutAntwort {
@@ -43,7 +44,7 @@ export function useAnordnen(anzeigeId: string | null, token: string | null) {
   const zuletzt = useRef("");                           // Layout, wie es das Board zuletzt bestätigt hat
 
   const anfrage = useCallback(async (methode: string, pfad: string, body?: unknown) => {
-    const res = await fetch(`/api/anzeigen/${encodeURIComponent(anzeigeId ?? "")}${pfad}`, {
+    const res = await fetch(apiUrl(`/api/anzeigen/${encodeURIComponent(anzeigeId ?? "")}${pfad}`), {
       method: methode,
       headers: { authorization: `Bearer ${token}`, ...(body === undefined ? {} : { "content-type": "application/json" }) },
       body: body === undefined ? undefined : JSON.stringify(body),

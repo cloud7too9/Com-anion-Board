@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BoardZustand, GezeigteKarte } from './typen';
+import { wsUrl } from './api';
 
 type Nachricht =
   | { art: 'zustand'; zustand: BoardZustand }
@@ -20,8 +21,7 @@ export function useBoard({ query }: { query: string }) {
     let timer: number | undefined;
 
     const verbinden = () => {
-      const protokoll = location.protocol === 'https:' ? 'wss' : 'ws';
-      const socket = new WebSocket(`${protokoll}://${location.host}/ws?${query}`);
+      const socket = new WebSocket(wsUrl(query));
       socketRef.current = socket;
 
       socket.onopen = () => {

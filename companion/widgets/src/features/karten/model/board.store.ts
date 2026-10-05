@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { QuellenAntwort, WidgetAntwort } from "../karte.types";
 import { mockKarte, mockQuellen } from "../lib/mock-karten";
 import { zugangHolen, zugangParameter, type Zugang } from "../lib/zugang";
+import { apiUrl, wsUrl } from "../lib/api";
 
 /**
  * Verbindung des Dashboards zum Board-Server.
@@ -41,15 +42,13 @@ interface BoardState {
   quellenLaden: (typ: string) => Promise<QuellenAntwort>;
 }
 
-const adresse = (pfad: string, parameter: Record<string, string>) => {
-  const q = new URLSearchParams(parameter).toString();
-  return `${pfad}${q ? `?${q}` : ""}`;
-};
+// Adressen kommen aus api.ts: mit VITE_API_URL von der API auf dem Pi, sonst vom eigenen Ursprung
+const adresse = apiUrl;
 
 /** Läuft das Dashboard am Board? GET /api/server meldet sich als „koordinaten-board“. */
 async function boardDa(): Promise<boolean> {
   try {
-    const res = await fetch("/api/server", { headers: { accept: "application/json" } });
+    const res = await fetch(apiUrl("/api/server"), { headers: { accept: "application/json" } });
     return res.ok && (await res.json())?.name === "koordinaten-board";
   } catch {
     return false;
@@ -107,9 +106,8 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
     const verbinden = (versuch = 0) => {
       if (aus) return;
-      const protokoll = location.protocol === "https:" ? "wss:" : "ws:";
       const parameter: Record<string, string> = token ? { token } : { rolle: "anzeige", ...zugangParameter(zugang) };
-      socket = new WebSocket(adresse(`${protokoll}//${location.host}/ws`, parameter));
+      socket = new WebSocket(wsUrl(parameter));
       socket.onopen = () => {
         // Was während der Trennung passiert ist, kam nicht an → neu laden
         if (versuch > 0) { geaendert(); void layoutLaden(); }

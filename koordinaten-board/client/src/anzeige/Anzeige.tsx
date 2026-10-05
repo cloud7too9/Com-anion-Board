@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { useBoard } from '../lib/verbindung';
 import { zugangHolen, zugangQuery } from '../lib/zugang';
+import { apiUrl } from '../lib/api';
 import { DIMENSIONEN, KATEGORIEN, dimensionLabel, kategorieLabel, thema, type Ort } from '../lib/typen';
 import { umrechnen, zahl } from '../lib/koordinaten';
 import { Icon } from '../komponenten/Icon';
@@ -99,7 +100,7 @@ export function Anzeige() {
   useEffect(() => {
     let letzteUrl = '';
     const holen = () =>
-      fetch(`/api/anzeige${ZUGANG_QUERY ? `?${ZUGANG_QUERY}` : ''}`)
+      fetch(apiUrl(`/api/anzeige${ZUGANG_QUERY ? `?${ZUGANG_QUERY}` : ''}`))
         .then((r) => (r.status === 403 ? (setGesperrt(true), null) : r.json()))
         .then((d: Beitritt | null) => {
           if (!d) return;
@@ -179,7 +180,6 @@ export function Anzeige() {
             <section className="a-angeheftet">
               {angeheftet.map((o) => (
                 <article key={o.id} className={`a-gross ${thema(o.dimension)} ${istNeu(o) ? 'neu' : ''}`}>
-                  {o.datei && <div className="bildgrund" style={{ backgroundImage: `url(/medien/${o.datei})` }} />}
                   <div className="kopfzeile">
                     <span className="ort-icon"><OrtIcon typ={o.typ} kategorie={o.kategorie} groesse={24} /></span>
                     <div style={{ minWidth: 0 }}>
