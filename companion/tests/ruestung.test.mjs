@@ -224,7 +224,9 @@ try {
   await d.waitForFunction(() => typeof st !== "undefined" && st.weltId);
   await d.evaluate(() => { modulWechseln("ruestung"); });
   await d.waitForFunction(() => rs.geladen);
-  await d.waitForFunction(() => document.querySelectorAll('[data-staender="r_1"] .staender-icons img').length === 4, null, { timeout: 5000 }).catch(() => {});
+  // Auf die vier Icons warten, bis sie auch geladen sind (auf dem CI-Runner sonst ein Wettlauf mit naturalWidth)
+  await d.waitForFunction(() => { const l = [...document.querySelectorAll('[data-staender="r_1"] .staender-icons img')]; return l.length === 4 && l.every((i) => i.complete && i.naturalWidth === 16); },
+    null, { timeout: 10000 }).catch(() => {});
   pruefe(await d.$$eval('[data-staender="r_1"] .staender-icons img', (l) => l.length === 4 && l.every((i) => i.naturalWidth === 16)), "Als Datei: Karte zeigt statt des Ständers die vier Icons");
   await d.click('[data-set="r_1"]');
   await d.waitForFunction(() => fig.art !== null);
