@@ -110,10 +110,10 @@ Das ist der größte RAM-Gewinn auf dem Pi. Git: erst Browser-Version committen 
 
 ### Phase 4: SQLite statt daten.json · Branch `umbau/sqlite`
 
-- [ ] Tabellen nach dem Datenmodell anlegen, jede Zeile mit `version`, dazu eine fortlaufende Änderungsnummer
-- [ ] Einmaliges Umzugsskript `daten.json` → SQLite, die JSON-Datei bleibt als Sicherung liegen
-- [ ] Biome je Kachel als Zeile statt einer großen JSON-Datei
-- [ ] Die Schnittstelle von `daten.js` gleich lassen, dann bleiben `companion-api.js` und die Tests unverändert
+- [x] Tabellen nach dem Datenmodell anlegen, jede Zeile mit `version`, dazu eine fortlaufende Änderungsnummer *(05.10.2026: `server/src/speicher.js`, `node:sqlite` im WAL-Modus; je Sammlung eine Tabelle `id, version, reihenfolge, daten (JSON)`, `werte` für Einstellungen und Zähler, `aenderungen(nr, sammlung, id, version, am)` als Änderungsnummer)*
+- [x] Einmaliges Umzugsskript `daten.json` → SQLite, die JSON-Datei bleibt als Sicherung liegen *(05.10.2026: macht der Server beim ersten Start mit leerer `daten.db` selbst; von Hand `npm run nach-sqlite -- <Ordner>`)*
+- [x] Biome je Kachel als Zeile statt einer großen JSON-Datei *(05.10.2026: `biome_import` + `biome_kacheln`, Kachel als BLOB)*
+- [x] Die Schnittstelle von `daten.js` gleich lassen, dann bleiben `companion-api.js` und die Tests unverändert *(05.10.2026: `companion-api.js` unverändert; die Daten bleiben im Speicher, geschrieben wird nach 300 ms nur, was sich geändert hat. Zwei Tests lesen jetzt `daten.db` statt der JSON-Dateien. Braucht Node 22.13+.)*
 
 Git: Schema, Umzugsskript und neue `daten.js` je ein Commit. Vor dem Merge das Umzugsskript gegen eine Kopie der echten `daten.json` laufen lassen.
 
@@ -166,7 +166,7 @@ Fünf Fragen musst du klären, bevor Phase 5 und 6 starten können.
 - [ ] Welches Gerät zeigt das Board an (TV-Browser, Tablet, Laptop)? Der Pi fällt aus, Raspberry OS Lite hat keinen Desktop.
 - [ ] Startseite der Domain: heutige Anzeige oder gleich das Widget-Dashboard, das sie später ersetzen soll?
 - [ ] Kommt nach `/app/` der Prototyp oder deine eigene `modul-a-live-karte.html`, die nicht im Repo liegt?
-- [ ] Welche Node-Version läuft auf dem Pi (`node -v`)? Ab 22.13 reicht `node:sqlite`.
+- [x] Welche Node-Version läuft auf dem Pi (`node -v`)? Ab 22.13 reicht `node:sqlite`. *(Entfällt: Der Pi bekommt laut Anleitung Node 22 LTS von NodeSource, `package.json` verlangt `>=22.13`.)*
 
 | Risiko | Folge | Gegenmittel |
 | --- | --- | --- |

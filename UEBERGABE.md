@@ -86,7 +86,7 @@ Was wohin gehört:
 | | Companion (`companion/`) | Koordinaten-Board (`koordinaten-board/`) |
 |---|---|---|
 | Zweck | Die App am Handy: Karte, Sammelobjekte, Portale, Banner, Rüstung, später Handbuch, Baupläne | **Server der Companion** (Daten, Live-Sync) und Anzeige im Zimmer |
-| Technik | eine HTML-Seite + `regeln.js`, Vanilla JS, kein Build; live vom Board ausgeliefert, sonst DEMO-Mock | Fastify 5, Vite + React 19 + TypeScript (nur Anzeige), JSON-Speicher |
+| Technik | eine HTML-Seite + `regeln.js`, Vanilla JS, kein Build; live vom Board ausgeliefert, sonst DEMO-Mock | Fastify 5, Vite + React 19 + TypeScript (nur Anzeige), SQLite (`node:sqlite`, seit Umbau Phase 4) |
 | Stand | 5 von 7 Bereichen umgesetzt, Handbuch und Baupläne offen; Welt-Import; nur Bedrock | Server der Companion; Widget-Dashboard unter `/dashboard` (A0–A6); Accounts mit PIN (B1, B2) |
 | Tests | Playwright: 15 Dateien mit 598 Prüfungen, dazu 20 Dekoder-Tests (`companion/tests`); Widgets: 108 Unit-Tests | `node --test`: 57 Tests (Daten, API, Regeln, Erkennung, Karten, Identität …) |
 | CI | alle Tests bei jedem PR und Push auf `main` (`.github/workflows/tests.yml`) | ← dieselbe CI |
@@ -105,7 +105,7 @@ Handy ──http──▶ Board-Server :3000
                 ├─ /api/…            Companion-API (daten.js) + Beitreten
                 ├─ /ws               Live: geaendert, zustand, gezeigt, teilnehmer
                 └─ /anzeige          React-Anzeige (nur mit Anzeige-Link): Orte der aktiven Welt
-Daten: koordinaten-board/server/daten/daten.json
+Daten: koordinaten-board/server/daten/daten.db (SQLite; daten.json bleibt als Sicherung vom Umzug)
 ```
 
 - **Beitreten**: Das Handy scannt den QR-Code der Anzeige mit der Kamera-App und landet auf `/?pin=…`. Die Companion erkennt den Live-Betrieb (`/api/server`), fragt nach dem Account (Name + eigene PIN, Strang B) und lädt danach die Daten des Boards. Eine eigene Kamera in der Seite braucht es dafür nicht.
