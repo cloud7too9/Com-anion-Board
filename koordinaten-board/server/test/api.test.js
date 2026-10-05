@@ -305,6 +305,16 @@ test('Widget-Layout: Handy speichert, Anzeige liest ihres und meldet ihre Reihen
   }
 });
 
+test('PIN-Sperre hinter dem Tunnel: CF-Connecting-IP von loopback zählt als Adresse, je Adresse eigene Sperre', async () => {
+  const falsch = (ip) => fetch(`${BASIS}/api/beitreten/konten`, { method: 'POST',
+    headers: { 'content-type': 'application/json', ...(ip && { 'cf-connecting-ip': ip }) }, body: JSON.stringify({ pin: '0000' }) });
+  for (let i = 0; i < 5; i += 1) assert.equal((await falsch('203.0.113.5')).status, 401);
+  assert.equal((await falsch('203.0.113.5')).status, 429, 'nach 5 Fehlversuchen gesperrt');
+  assert.equal((await falsch('203.0.113.6')).status, 401, 'andere Adresse hinter dem Tunnel: eigene Zählung');
+  assert.equal((await fetch(`${BASIS}/api/beitreten/konten`, { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pin: '4711' }) })).status, 200, 'ohne Header (direkt, 127.0.0.1) nicht mitgesperrt');
+});
+
 test('Rüstungs-Baukasten wird ausgeliefert (Texturen, Module, Manifest)', async () => {
   const manifest = await (await fetch(`${BASIS}/ruestungs-baukasten/manifest.json`)).json();
   assert.equal(manifest.teile.length, 4);

@@ -21,6 +21,9 @@ import { erkennungBeenden } from './erkennung.js';
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
+// Lausch-Adresse: 0.0.0.0 fürs Heimnetz (Handys im WLAN). Auf dem Pi hinter cloudflared HOST=127.0.0.1,
+// dann erreicht den Server nur noch der Tunnel (Umbau Phase 6).
+const HOST = process.env.HOST ?? '0.0.0.0';
 const DATEN = path.resolve(process.env.DATEN_ORDNER ?? path.join(HIER, '..', 'daten'));
 const CLIENT_DIST = path.resolve(HIER, '..', '..', 'client', 'dist');
 // Widget-Dashboard (companion/widgets, `npm run build` → dist/), ausgeliefert unter /dashboard
@@ -47,8 +50,16 @@ await mkdir(DATEN, { recursive: true });
 const PIN = process.env.RAUM_PIN ?? (await dauerwertLaden('pin.txt', () => String(randomInt(1000, 10000))));
 const GEHEIM = await dauerwertLaden('geheim.txt', () => randomBytes(32).toString('hex'));
 
-/** Kommt die Verbindung vom Gerät selbst (loopback)? Gibt keine Rechte mehr, hilft nur beim Adress-Lernen. */
+/** Kommt die Verbindung vom Gerät selbst (loopback)? Gibt keine Rechte mehr; dort sitzt hinter dem Tunnel cloudflared. */
 const istLokal = (req) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
+/** Adresse des Geräts für PIN-Sperre und Anmeldung. Hinter cloudflared (Umbau Phase 6) kommt jede Anfrage von
+ *  127.0.0.1 und trägt die echte Adresse im Header CF-Connecting-IP. Der Header zählt nur von loopback, sonst
+ *  könnte ein Handy im WLAN die Sperre mit einem erfundenen Header umgehen. */
+function clientIp(req) {
+  const kopf = req.headers['cf-connecting-ip'];
+  if (istLokal(req) && typeof kopf === 'string' && kopf.trim()) return kopf.trim();
+  return req.socket.remoteAddress;
+}
 /** Darf diese Anfrage Anzeige sein? Nur mit gültigem Anzeige-Link (?anzeige=…&schluessel=…) */
 const anzeigeZugang = (req) => {
   const { anzeige, schluessel } = req.query ?? {};
@@ -81,7 +92,7 @@ const anzeigeLink = (a) => `${lanAdresse()}/anzeige?anzeige=${encodeURIComponent
 
 /** Merkt sich die IP, die ein anderes Gerät in der Adresszeile benutzt hat. */
 function adresseLernen(req) {
-  if (istLokal(req)) return;
+  if (istLokal(req)) return;   // auch hinter dem Tunnel: dort nennt OEFFENTLICHE_URL die Adresse
   const host = (req.headers.host ?? '').replace(/:\d+$/, '');
   if (!host || host === bewaehrt || !netz.kandidaten.some((k) => k.adresse === host)) return;
   bewaehrt = host;
@@ -145,7 +156,7 @@ function anmeldeFehler(reply, f) {
 // Beitreten (B2): Board-PIN aus dem QR-Code, dann Account wählen oder anlegen – Name + eigene PIN
 app.post('/api/beitreten/konten', async (req, reply) => {
   try {
-    return { konten: ident.konten(req.body?.pin, req.socket.remoteAddress) };
+    return { konten: ident.konten(req.body?.pin, clientIp(req)) };
   } catch (f) {
     return anmeldeFehler(reply, f);
   }
@@ -154,7 +165,7 @@ app.post('/api/beitreten/konten', async (req, reply) => {
 app.post('/api/beitreten', async (req, reply) => {
   const { pin, name, kontoPin } = req.body ?? {};
   try {
-    return await ident.anmelden({ pin, name, kontoPin, ip: req.socket.remoteAddress });
+    return await ident.anmelden({ pin, name, kontoPin, ip: clientIp(req) });
   } catch (f) {
     return anmeldeFehler(reply, f);
   }
@@ -391,9 +402,9 @@ function anzeigeLinkMerken() {
   if (erste) writeFile(ANZEIGE_LINK_DATEI, anzeigeLink(erste)).catch(() => {});
 }
 
-await app.listen({ port: PORT, host: '0.0.0.0' });
+await app.listen({ port: PORT, host: HOST });
 anzeigeLinkMerken();
-console.log('\n  Koordinaten-Board läuft');
+console.log(`\n  Koordinaten-Board läuft (lauscht auf ${HOST}:${PORT})`);
 console.log(`  Companion (Handys):      ${lanAdresse()}   PIN ${PIN}`);
 const anzeigen = daten.anzeigenListe();
 for (const a of anzeigen) {
