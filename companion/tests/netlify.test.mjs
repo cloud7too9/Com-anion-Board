@@ -4,7 +4,7 @@
 // mit Anzeige-Link, Kennblöcke unter /icons/, Service Worker hält die App-Shell auch offline bereit.
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
-import { mkdtempSync, rmSync, mkdirSync, existsSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { spawn, execFileSync } from "node:child_process";
@@ -104,6 +104,19 @@ try {
   await tv.goto(`${SEITE}/dashboard${link}`);
   pruefe(await warteAuf(tv, () => location.pathname === "/dashboard/" && document.querySelector('[data-panel-id="w-sammelstatus"] [data-testid="karte"]') && !document.querySelector('[data-testid="beispielkarten"]'), null, 15000), "Dashboard zeigt Karten vom Board (keine Beispielkarten)");
   await tv.screenshot({ path: `${DIR}/n3-dashboard-netlify.png` });
+
+  // ---- Neue Version: Knopf „Aktualisieren“ (Max, 05.10.2026) ----
+  await warteAuf(p, () => navigator.serviceWorker.controller !== null, null, 10000);
+  pruefe(await p.$eval("#aktualisierenBtn", (b) => b.hidden), "Ohne neue Version kein „Aktualisieren“");
+  const swDatei = path.join(DIST, "app/sw.js");
+  writeFileSync(swDatei, readFileSync(swDatei, "utf8").replace(/const STAND = "[^"]*"/, 'const STAND = "neuer-stand"'));   // wie ein neuer Build
+  await p.evaluate(() => navigator.serviceWorker.getRegistration().then((r) => r.update()));
+  pruefe(await warteAuf(p, () => !document.getElementById("aktualisierenBtn").hidden, null, 15000), "Neuer Service Worker übernommen → Knopf „Aktualisieren“");
+  await p.evaluate(() => alleSchliessen());   // das Welt-Sheet liegt über dem Knopf
+  await p.screenshot({ path: `${DIR}/n4-aktualisieren.png` });
+  await Promise.all([p.waitForNavigation(), p.click("#aktualisierenBtn")]);
+  pruefe(await warteAuf(p, () => document.querySelector("header") && document.getElementById("aktualisierenBtn").hidden, null, 10000), "Aktualisieren lädt die Seite neu, Knopf weg");
+  pruefe(await warteAuf(p, () => caches.keys().then((k) => k.length === 1 && k[0] === "companion-neuer-stand"), null, 10000), "Alter Cache weggeräumt, nur der neue Stand bleibt");
 
   // ---- Offline: die App-Shell kommt aus dem Service Worker ----
   await warteAuf(p, () => navigator.serviceWorker.controller !== null, null, 10000);

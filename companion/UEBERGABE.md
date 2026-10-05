@@ -140,6 +140,8 @@ Max hat einen **Rüstungs-Baukasten** geschickt (Zip „ruestung“, jetzt `rues
 Wunsch von Max: einen Scanner einbauen, mit dem man sich mit dem Board verbindet, **danach** überlegen, wie einzelne Inhalte ans Board gehen. Seit der **Zusammenführung** (Branch `board/zusammenfuehrung`) ist das Board zugleich der Server der Companion.
 
 - Kein Bereich, sondern ein Eintrag **Board** unten in der Sidebar mit Status-Punkt. Details in `README.md` → Live-Betrieb und Board-Verbindung.
+- **Spielerprofil** oben in der Sidebar (Max, 05.10.2026): Name des Accounts und ein Platzhalter für Profilbild oder Skin (`profilKarteRendern`, `profilName`). Was später ins Profil kommt (Bild, Skin, mehr), ist noch nicht besprochen.
+- **Aktualisieren** (PWA, Max 05.10.2026): Bei einer neuen Version zeigt die App den Knopf „Neue Version · Aktualisieren“ (`aktualisierenEinrichten`, Knopf `#aktualisierenBtn`); Details in `README.md` → Live-Betrieb → PWA.
 - **Live** (vom Board ausgeliefert): Beitreten mit der Board-PIN aus dem QR-Code und einem **Account** (Name + eigene PIN, Auswahl der Accounts im Sheet; `IDENTITAET.werBistDu()`, `bd.ich`) ist die Anmeldung für alle Daten; Änderungen anderer Handys kommen live an (`liveAktualisieren`). Im Board-Sheet: Welt auf der Anzeige, Titel, QR-Code, **Anzeigen** (Anzeige-Link je Gerät: kopieren, QR-Code, umbenennen, neuer Schlüssel, neue Anzeige – `boardAnzeigenLaden`, `boardAnzeigenHtml`; „Anzeige anordnen“ öffnet `/dashboard/anordnen?anzeige=…` im Widget-Dashboard, A6), „Abmelden“. Im Ort-Detail: „Auf der Anzeige anheften“.
 - **Woanders geöffnet** (Datei, anderer Server): Kamera-Scanner (BarcodeDetector oder jsQR vom CDN), Foto vom QR-Code, Adresse + PIN von Hand; die Daten bleiben dann im DEMO-Mock, nur „Aufs Board“ geht ans echte Board. Dafür sind `/api/beitreten` und `/api/ich` per CORS offen, mit einer Sperre nach 5 falschen PINs.
 - **Aufs Board** (Variante B, von Max gewählt): Inhalte groß auf die Anzeige werfen, wie Chromecast. Das Board speichert nichts; die Karte liegt dort, bis die nächste kommt oder jemand sie wegnimmt.
@@ -159,7 +161,7 @@ Noch nichts festgelegt. Zuerst mit Max klären, was hinein soll.
 | Abschnitt | Inhalt |
 |---|---|
 | CSS oben | Basis 1:1 aus Modul A, danach ein eigener Block je Bereich: Karte, Sammelobjekte, Banner, Rüstung, Portal-Verwaltung |
-| HTML | Header, `main.module-stack` mit je einer `<section class="module" data-module="…">` pro Bereich, Sidebar, ein gemeinsames Sheet `#orteSheet`, Toast |
+| HTML | Header, `main.module-stack` mit je einer `<section class="module" data-module="…">` pro Bereich, Sidebar (oben `#sbProfil`, unten Welt und Board), ein gemeinsames Sheet `#orteSheet`, Toast, Knopf `#aktualisierenBtn` |
 | JS 0 · KONFIG | `CONFIG` (Weltgrenze, Kachelgröße, Biom-Höhe in Nether/End, Zoom …) |
 | JS 1 · THEMES | UI-Tokens der drei Dimensionen |
 | `board-karten.js` (eigene Datei) | Hilfen `zahl`, `umrechnen`, `entfernung`, `STRUKTUREN`, Portal-Prüfung (`zielSuchen`, `verbindungPruefen`, `portalEmpfehlung`, Suchradius ±128), `bannerAnleitung`, `bannerPixel`, `besatzStandVon`; Anzeigeschemas `BOARD_KARTEN` mit `karte(ctx, id)` – lädt auch der Board-Server |
@@ -170,12 +172,12 @@ Noch nichts festgelegt. Zuerst mit Max klären, was hinein soll.
 | JS 4 · API + MOCK | API-Vertrag als Kommentar, `betriebErkennen` (live oder DEMO), `MOCK` (mit `demoBiome()`), `mockApi`, `api()`, `kachelAusText`/`kachelZuText` |
 | JS 5–8 | State (`st`, Biome `bm` mit `biomeSetzen`, `biomAnStelle`, `kachelBild`), Theme (`applyTheme`), Liste, Canvas-Karte (Biom-Kacheln, Legende, Tippen → Biom) |
 | JS 9 · SHEETS | `sheetOeffnen(art, html, dim)`, `kopfHtml`, `koordFelder`/`koordLesen`, Karte-Sheets |
-| JS 9b · BEREICHE | `ICON`, `BEREICHE`, `modulWechseln`, `sidebarBauen` |
+| JS 9b · BEREICHE | `ICON`, `BEREICHE`, `modulWechseln`, `profilKarteRendern`, `sidebarBauen` |
 | JS 9c–9e | Sammelobjekte, Banner, Portal-Verwaltung |
 | JS 9f · BOARD-VERBINDUNG | `bd`, `boardQrLesen`, `qrLeser`, `boardScanStarten`, `boardBeitreten`, `boardVerbinden`, `boardSheetRendern`; live: `anmeldungAbgelaufen`, `liveAktualisieren`, `boardEinstellungen…`; Aufs Board: `boardSenden`, `boardKontext` (Kontext für `BOARD_KARTEN` aus `board-karten.js`), `pngDaten`, `boardZeigen`, `boardWegnehmen`, `boardZeigenKnopf` |
 | JS 9g · RÜSTUNG | `rs`, `teilIcon`/`teilIconDatei`, `besatzStand`, `ruestungLaden`, `renderRuestung`, `ruestungDetailOeffnen` (`rezeptHtml`, `bedarfHtml`); Liste `staenderFoto`/`staenderFotosLaden`, `teilChipHtml`, Editor `ruestungEditorOeffnen`/`…Rendern`/`…Klick`, `ruestungSpeichern`; Figur `fig`, `figurModus` (3d/2d/icons), `buehneZeigen`, `glanzStarten`, `drehenEinrichten`; Board `ruestungFoto`, `ruestungKarte` |
 | JS 9h · WELT-IMPORT | `WELT_ANLEITUNGEN`, `wi` (Schritt, Datei, Worker, Ergebnis), `weltImportDatei`/`…Lesen`/`…Nachricht`, `wiAuswertung` (Vorschau, häufigste Biome), `weltImportRendern`, `weltImportUebernehmen`/`…Loeschen`, `biomeLaden`, `biomKnopfZeigen` |
-| JS 10 | Weltdaten laden, Events, `$sheet`-Klick-Switch (`data-aktion`), `datenStarten()`, `init()` |
+| JS 10 | Weltdaten laden, Events, `$sheet`-Klick-Switch (`data-aktion`), `datenStarten()`, `init()`, `pwaStarten()` + `aktualisierenEinrichten()` |
 
 ### Checkliste: neuen Bereich einbauen
 
