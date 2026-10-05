@@ -144,7 +144,7 @@ npm start                                              # Windows: start.bat (bau
 |---|---|---|
 | Board-Server | `cd koordinaten-board && npm test` | 59 Tests (seit Umbau Phase 1: CORS, Client-IP hinter dem Tunnel, Board-PIN; seit Phase 3 ohne OCR; seit Phase 4 mit SQLite-Umzug) |
 | Widgets | `cd companion/widgets && npm run typecheck && npm test` | Typecheck ok, 108 Unit-Tests |
-| Companion und Dashboard (Playwright) | `cd companion/tests && npm test` | 16 Dateien (seit Umbau Phase 2 auch `getrennt`), dazu 20 Dekoder-Tests |
+| Companion und Dashboard (Playwright) | `cd companion/tests && npm test` | 17 Dateien (seit Umbau Phase 2 `getrennt`, seit Phase 5 `netlify`), dazu 20 Dekoder-Tests |
 
 **CI auf GitHub:** `.github/workflows/tests.yml` führt alle drei Teile bei jedem Pull Request und jedem Push auf `main` aus (Jobs „Board-Server“, „Widgets“, „Companion und Dashboard (Playwright)“, zusammen etwa 5 Minuten). Die Screenshots aus `companion/tests/bilder/`, darunter die Haltepunkte, hängen als Download „bilder“ am Lauf (14 Tage). Ein neuer Push auf denselben PR bricht den alten Lauf ab.
 

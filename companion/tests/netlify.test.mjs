@@ -1,0 +1,123 @@
+// Netlify-Stand (Umbau Phase 5): netlify/bauen.sh baut Anzeige (/), Companion (/app/) und Dashboard (/dashboard/)
+// mit der Adresse einer API auf einem anderen Ursprung. Hier liefert ein kleiner Server den Build mit den
+// _redirects aus, das Board läuft daneben: Beitreten als PWA, QR-Code zeigt auf /app/, Anzeige und Dashboard
+// mit Anzeige-Link, Kennblöcke unter /icons/, Service Worker hält die App-Shell auch offline bereit.
+import { chromium } from "playwright";
+import { fileURLToPath } from "node:url";
+import { mkdtempSync, rmSync, mkdirSync, existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import { spawn, execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { CHROMIUM_OPTIONEN, anzeigeLinkQuery } from "./hilfen.mjs";
+
+const HIER = fileURLToPath(new URL(".", import.meta.url));
+const WURZEL = path.join(HIER, "../..");
+const DIR = path.join(HIER, "bilder"); mkdirSync(DIR, { recursive: true });
+const TMP = mkdtempSync(path.join(tmpdir(), "netlify-"));
+const PORT = 3199, SEITE_PORT = 3197, PIN = "471100", BOARD = `http://127.0.0.1:${PORT}`, SEITE = `http://127.0.0.1:${SEITE_PORT}`;
+const pruefe = (ok, text) => { console.log((ok ? "OK   " : "FEHL ") + text); if (!ok) process.exitCode = 1; };
+const schlafen = (ms) => new Promise((r) => setTimeout(r, ms));
+const warteAuf = (p, fn, arg, ms = 8000) => p.waitForFunction(fn, arg, { timeout: ms }).then(() => true, () => false);
+
+// ---- Bauen wie bei Netlify (ohne npm ci: node_modules sind da) ----
+const DIST = path.join(TMP, "dist");
+execFileSync("bash", ["netlify/bauen.sh"], { cwd: WURZEL, stdio: "ignore", env: { ...process.env, API_URL: BOARD, ZIEL: DIST, OHNE_INSTALL: "1" } });
+pruefe(existsSync(path.join(DIST, "index.html")) && existsSync(path.join(DIST, "app/index.html")) && existsSync(path.join(DIST, "dashboard/index.html")), "Build: Anzeige, Companion unter app/, Dashboard unter dashboard/");
+pruefe(readFileSync(path.join(DIST, "app/konfig.js"), "utf8").includes(`apiAdresse: "${BOARD}"`) && existsSync(path.join(DIST, "icons/struktur_kennbloecke/stronghold.png")), "Build: konfig.js nennt die API, Kennblöcke unter /icons/");
+pruefe(!readFileSync(path.join(DIST, "app/sw.js"), "utf8").includes("__STAND__"), "Build: Stand im Service Worker eingesetzt");
+
+// ---- Statischer Server mit den _redirects von Netlify ----
+const TYPEN = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json",
+  ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".gz": "application/gzip", ".woff": "font/woff", ".woff2": "font/woff2" };
+const regeln = readFileSync(path.join(DIST, "_redirects"), "utf8").split("\n").map((z) => z.trim()).filter((z) => z && !z.startsWith("#")).map((z) => z.split(/\s+/));
+const seite = createServer(async (req, res) => {
+  const pfad = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  const datei = (p) => { const d = path.join(DIST, p); return !path.relative(DIST, d).startsWith("..") && existsSync(d) && path.extname(d) ? d : null; };
+  let ziel = datei(pfad) ?? (pfad.endsWith("/") ? datei(`${pfad}index.html`) : null);
+  if (!ziel) {
+    const regel = regeln.find(([von]) => von === pfad || (von.endsWith("/*") && pfad.startsWith(von.slice(0, -1))));
+    if (regel && regel[2] === "301") { res.writeHead(301, { location: regel[1] + (req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "") }).end(); return; }
+    ziel = regel ? datei(regel[1]) : null;
+  }
+  if (!ziel) { res.writeHead(404).end("Nicht gefunden"); return; }
+  res.writeHead(200, { "content-type": TYPEN[path.extname(ziel)] ?? "application/octet-stream" }).end(await readFile(ziel));
+});
+await new Promise((ok) => seite.listen(SEITE_PORT, "127.0.0.1", ok));
+
+const board = spawn(process.execPath, ["src/server.js"], {
+  cwd: path.join(WURZEL, "koordinaten-board/server"),
+  env: { ...process.env, PORT: String(PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten"), ERLAUBTE_URSPRUENGE: SEITE, OEFFENTLICHE_URL: SEITE, COMPANION_PFAD: "/app/" },
+  stdio: "ignore",
+});
+const browser = await chromium.launch(CHROMIUM_OPTIONEN);
+const fehler = [];
+try {
+  for (let i = 0; i < 60 && !(await fetch(`${BOARD}/api/server`).then((r) => r.ok, () => false)); i++) await schlafen(200);
+  const link = await anzeigeLinkQuery(path.join(TMP, "daten"));
+
+  // ---- Redirects und QR-Code ----
+  const um = await fetch(`${SEITE}/app?pin=1`, { redirect: "manual" });
+  pruefe(um.status === 301 && um.headers.get("location") === "/app/?pin=1", "/app → /app/ (Query bleibt)");
+  pruefe((await fetch(`${SEITE}/dashboard/vollbild/w-x`)).headers.get("content-type").startsWith("text/html"), "/dashboard/* → Dashboard-Seite");
+  const anzeigeApi = await (await fetch(`${BOARD}/api/anzeige${link}`)).json();
+  pruefe(anzeigeApi.beitrittsUrl === `${SEITE}/app/?pin=${PIN}`, `QR-Code zeigt auf die Companion unter /app/ (${anzeigeApi.beitrittsUrl})`);
+
+  // ---- Companion als PWA von Netlify, Board auf dem anderen Ursprung ----
+  const kontext = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  const p = await kontext.newPage();
+  p.on("pageerror", (e) => fehler.push(e.message));
+  let offline = false;
+  p.on("console", (m) => { if (m.type() === "error" && !m.text().startsWith("Failed to load resource") && !(offline && m.text().startsWith("WebSocket connection to"))) fehler.push(m.text()); });
+  await p.goto(anzeigeApi.beitrittsUrl);
+  await p.waitForSelector("#boardName");
+  pruefe(await p.evaluate((b) => !DEMO.enabled && BOARD_ADRESSE === b, BOARD), "Companion unter /app/ läuft live gegen die API");
+  pruefe(await p.evaluate(() => document.querySelector('link[rel="manifest"]')?.getAttribute("href") === "manifest.webmanifest" && document.querySelector('link[rel="apple-touch-icon"]') !== null), "Manifest und Apple-Icon eingehängt");
+  const manifest = await (await fetch(`${SEITE}/app/manifest.webmanifest`)).json();
+  pruefe(manifest.scope === "./" && manifest.display === "standalone" && (await fetch(`${SEITE}/app/icons/app/icon-512.png`)).ok, "Manifest: Scope /app/, standalone, Icons da");
+  pruefe(await warteAuf(p, () => navigator.serviceWorker?.controller || navigator.serviceWorker?.ready.then(() => true), null, 15000), "Service Worker registriert");
+  await p.fill("#boardName", "Max");
+  await p.fill("#boardKontoPin", "2468");
+  await p.click('[data-aktion="board-beitreten"]');
+  pruefe(await warteAuf(p, () => bd.verbindung?.name === "Max" && bd.status === "verbunden"), "Beigetreten, Live-Verbindung steht");
+  await warteAuf(p, () => document.querySelector(".sheet-kopf h2")?.textContent === "Welt");
+  const token = await p.evaluate(() => bd.verbindung.token);
+  const api = (methode, pfad, body) => fetch(BOARD + pfad, { method: methode, headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: body === undefined ? undefined : JSON.stringify(body) }).then((r) => r.json());
+  const welt = (await api("POST", "/api/orte/welten", { seed: "6889192652397090698" })).welt;
+  await api("PUT", "/api/board/einstellungen", { aktiveWelt: welt.id, titel: "Netlify-Welt" });
+  const ort = await api("POST", "/api/orte/instanzen", { dimensionId: `d_${welt.id}_overworld`, kategorie: "Stronghold", variante: "Stairway", x: -1884, y: null, z: -524, quelle: "screenshot" });   // neue Variante: nur aus Screenshots
+  pruefe(ort.instanz?.id, `Ort über die API angelegt (${ort.instanz?.id ?? ort.message})`);
+  await p.screenshot({ path: `${DIR}/n1-companion-app.png` });
+
+  // ---- Anzeige unter / mit Anzeige-Link, Kennblock aus /icons/ ----
+  const tv = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  tv.on("pageerror", (e) => fehler.push(`Anzeige: ${e.message}`));
+  await tv.goto(`${SEITE}/`);
+  pruefe(await warteAuf(tv, () => document.querySelector(".a-fehler")?.textContent.includes("Anzeige-Link")), "Anzeige ohne Link: gesperrt");
+  await tv.goto(`${SEITE}/anzeige${link}`);
+  pruefe(await warteAuf(tv, () => document.querySelector("h1")?.textContent === "Netlify-Welt" && document.querySelector(".a-zeile")), "Anzeige mit Link: Titel und Ort vom Board");
+  pruefe(await warteAuf(tv, () => [...document.querySelectorAll("img.kennblock")].some((i) => i.complete && i.naturalWidth > 0 && i.src.includes("/icons/struktur_kennbloecke/"))), "Kennblock der Festung kommt von /icons/");
+  await tv.screenshot({ path: `${DIR}/n2-anzeige-netlify.png` });
+
+  // ---- Dashboard unter /dashboard/ mit Anzeige-Link ----
+  await tv.goto(`${SEITE}/dashboard${link}`);
+  pruefe(await warteAuf(tv, () => location.pathname === "/dashboard/" && document.querySelector('[data-panel-id="w-sammelstatus"] [data-testid="karte"]') && !document.querySelector('[data-testid="beispielkarten"]'), null, 15000), "Dashboard zeigt Karten vom Board (keine Beispielkarten)");
+  await tv.screenshot({ path: `${DIR}/n3-dashboard-netlify.png` });
+
+  // ---- Offline: die App-Shell kommt aus dem Service Worker ----
+  await warteAuf(p, () => navigator.serviceWorker.controller !== null, null, 10000);
+  offline = true;
+  await kontext.setOffline(true);
+  await p.reload().catch(() => {});
+  pruefe(await warteAuf(p, () => typeof BOARD_ADRESSE !== "undefined" && document.querySelector("header"), null, 10000), "Offline: Seite kommt aus dem Cache des Service Workers");
+  await kontext.setOffline(false);
+} catch (e) {
+  pruefe(false, `Abbruch: ${e.stack || e}`);
+} finally {
+  pruefe(fehler.length === 0, `keine Fehler in der Seite${fehler.length ? `: ${fehler.join(" | ")}` : ""}`);
+  await browser.close();
+  await new Promise((ok) => seite.close(ok));
+  board.kill("SIGTERM"); await new Promise((r) => board.once("exit", r));
+  rmSync(TMP, { recursive: true, force: true });
+}

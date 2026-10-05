@@ -119,11 +119,11 @@ Git: Schema, Umzugsskript und neue `daten.js` je ein Commit. Vor dem Merge das U
 
 ### Phase 5: Netlify-Seite · Branch `umbau/netlify`
 
-- [ ] `netlify.toml` im Repo-Wurzelordner: baut Anzeige und Dashboard, kopiert die Companion nach `/app/`
-- [ ] `_redirects` für die Routen von Anzeige und Dashboard (`/dashboard/*` → `index.html`)
-- [ ] Companion installierbar machen: Manifest und Service Worker mit Scope `/app/`, App-Shell im Cache
-- [ ] QR-Code zeigt auf `https://deinedomain.de/app/?pin=…` (`OEFFENTLICHE_URL`)
-- [ ] Erst mit der `.netlify.app`-Adresse testen, noch ohne Domain
+- [x] `netlify.toml` im Repo-Wurzelordner: baut Anzeige und Dashboard, kopiert die Companion nach `/app/` *(05.10.2026: `netlify.toml` + `netlify/bauen.sh`; die Adresse der API kommt aus der Netlify-Umgebungsvariable `API_URL` in `VITE_API_URL` und `app/konfig.js`)*
+- [x] `_redirects` für die Routen von Anzeige und Dashboard (`/dashboard/*` → `index.html`) *(05.10.2026: `netlify/_redirects`, auch `/anzeige*` → `/index.html`)*
+- [x] Companion installierbar machen: Manifest und Service Worker mit Scope `/app/`, App-Shell im Cache *(05.10.2026: `companion/manifest.webmanifest`, `companion/sw.js`, Icons in `companion/icons/app/`; nur aktiv, wenn `konfig.js` `pwa: true` setzt, lokal vom Board also nicht)*
+- [x] QR-Code zeigt auf `https://deinedomain.de/app/?pin=…` (`OEFFENTLICHE_URL`) *(05.10.2026: neue Umgebungsvariable `COMPANION_PFAD=/app/` am Server, lokal bleibt `/`)*
+- [ ] Erst mit der `.netlify.app`-Adresse testen, noch ohne Domain *(braucht Max: Netlify-Konto, Site aus dem GitHub-Repo, Umgebungsvariable `API_URL`. Lokal ist der ganze Stand geprüft: `companion/tests/netlify.test.mjs` baut wie Netlify und prüft Beitreten als PWA, QR-Code auf `/app/`, Anzeige und Dashboard mit Anzeige-Link, Kennblöcke, Offline aus dem Service Worker.)*
 
 Git: Push löst bei Netlify einen Vorschau-Build für den PR aus, dort testen, dann mergen.
 
