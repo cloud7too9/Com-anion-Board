@@ -8,7 +8,7 @@ Zwei Projekte für eine gemeinsame Minecraft-Welt im Raum – seit dem 29.09.202
 |---|---|---|
 | [`companion/`](companion/) | **Companion**: die App am Handy – Karte, Sammelobjekte, Portal-Verwaltung, Banner, Rüstung (eine HTML-Seite + `regeln.js`, Vanilla JS) | aktuelle Arbeit |
 | [`companion/widgets/`](companion/widgets/) | **Widgets**: Widget-Dashboard fürs Board unter `/dashboard` (Vite + React + TypeScript, aus MainHub): 13 Widget-Typen, Karten vom Board, Bereichs-Themes, Layout je Anzeige | A0–A6 gebaut, A7 offen |
-| [`koordinaten-board/`](koordinaten-board/) | **Koordinaten-Board**: Server der Companion (Daten, OCR, Live-Sync) und Anzeige im Zimmer (Fastify + React) | zusammengeführt |
+| [`koordinaten-board/`](koordinaten-board/) | **Koordinaten-Board**: Server der Companion (Daten, Live-Sync) und Anzeige im Zimmer (Fastify + React) | zusammengeführt |
 | [`planung/`](planung/) | **Planung**: Umbauplan Netlify + Pi ([`UMBAUPLAN.md`](planung/UMBAUPLAN.md)), Gesamtplan Widget-Dashboard, Offline-Sync, Welt-Import ([`PLAN.md`](planung/PLAN.md)) plus Ideen und Baupläne der Planungskommission | Umbau Phase 1 |
 | [`referenz/`](referenz/) | **Gemeinsame Referenz**: Datenmodell, Seed-Map-Screenshots, Dashboard-Vorbild | – |
 
@@ -20,7 +20,7 @@ Zwei Projekte für eine gemeinsame Minecraft-Welt im Raum – seit dem 29.09.202
 - Handy und Server prüfen mit **derselben Datei** `companion/regeln.js` und bauen Karten mit derselben Datei `companion/board-karten.js`.
 - Die **Anzeige** (`/anzeige`) zeigt die Orte der aktiven Welt; jeder Inhalt der Companion lässt sich per „Aufs Board“ groß darauf werfen (Anzeigeschema in `BOARD_KARTEN`).
 - Das **Widget-Dashboard** (`/dashboard`, in Arbeit) zeigt je Anzeige ihr Layout aus Widgets; die Inhalte sind Karten, die das Board mit denselben Anzeigeschemas baut.
-- Die Texterkennung des Boards liest Seed-Map-Screenshots und Banner-Anleitungen für die Companion aus (`/api/orte/auslesen`).
+- Seed-Map-Screenshots und Banner-Anleitungen liest die Companion seit Umbau Phase 3 am Handy selbst aus (`companion/texterkennung.js`, tesseract.js im Browser).
 - Beide nutzen dieselbe Optik (Dimensions-Themes aus `modul-a-live-karte.html`) und dieselben Seed-Map-Screenshots als Grundlage.
 - `modul-a-live-karte.html`, die Hauptdatei der Companion-PWA, liegt **nicht** in diesem Repo. Max pflegt sie selbst; das Board kann sie später statt des Prototyps ausliefern (`COMPANION_DATEI`).
 

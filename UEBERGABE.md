@@ -85,8 +85,8 @@ Was wohin gehört:
 
 | | Companion (`companion/`) | Koordinaten-Board (`koordinaten-board/`) |
 |---|---|---|
-| Zweck | Die App am Handy: Karte, Sammelobjekte, Portale, Banner, Rüstung, später Handbuch, Baupläne | **Server der Companion** (Daten, OCR, Live-Sync) und Anzeige im Zimmer |
-| Technik | eine HTML-Seite + `regeln.js`, Vanilla JS, kein Build; live vom Board ausgeliefert, sonst DEMO-Mock | Fastify 5, Vite + React 19 + TypeScript (nur Anzeige), JSON-Speicher, tesseract.js |
+| Zweck | Die App am Handy: Karte, Sammelobjekte, Portale, Banner, Rüstung, später Handbuch, Baupläne | **Server der Companion** (Daten, Live-Sync) und Anzeige im Zimmer |
+| Technik | eine HTML-Seite + `regeln.js`, Vanilla JS, kein Build; live vom Board ausgeliefert, sonst DEMO-Mock | Fastify 5, Vite + React 19 + TypeScript (nur Anzeige), JSON-Speicher |
 | Stand | 5 von 7 Bereichen umgesetzt, Handbuch und Baupläne offen; Welt-Import; nur Bedrock | Server der Companion; Widget-Dashboard unter `/dashboard` (A0–A6); Accounts mit PIN (B1, B2) |
 | Tests | Playwright: 15 Dateien mit 598 Prüfungen, dazu 20 Dekoder-Tests (`companion/tests`); Widgets: 108 Unit-Tests | `node --test`: 57 Tests (Daten, API, Regeln, Erkennung, Karten, Identität …) |
 | CI | alle Tests bei jedem PR und Push auf `main` (`.github/workflows/tests.yml`) | ← dieselbe CI |
@@ -102,7 +102,7 @@ Handy ──http──▶ Board-Server :3000
                 ├─ /                 Companion (companion/companion-prototyp.html, live)
                 ├─ /regeln.js, /icons/…, /ruestungs-baukasten/…  aus companion/
                 ├─ /biom-*.js, /vendor/…  Welt-Import (Worker im Browser des Handys)
-                ├─ /api/…            Companion-API (daten.js) + Beitreten + OCR (/api/orte/auslesen)
+                ├─ /api/…            Companion-API (daten.js) + Beitreten
                 ├─ /ws               Live: geaendert, zustand, gezeigt, teilnehmer
                 └─ /anzeige          React-Anzeige (nur mit Anzeige-Link): Orte der aktiven Welt
 Daten: koordinaten-board/server/daten/daten.json
@@ -111,7 +111,7 @@ Daten: koordinaten-board/server/daten/daten.json
 - **Beitreten**: Das Handy scannt den QR-Code der Anzeige mit der Kamera-App und landet auf `/?pin=…`. Die Companion erkennt den Live-Betrieb (`/api/server`), fragt nach dem Account (Name + eigene PIN, Strang B) und lädt danach die Daten des Boards. Eine eigene Kamera in der Seite braucht es dafür nicht.
 - **Gemeinsame Regeln**: `companion/regeln.js` enthält Stammdaten und Regel-Funktionen. Die Seite bindet sie ein, der Server lädt sie per `node:vm` – nichts wird doppelt gepflegt.
 - **Live**: Jede Änderung meldet der Server als `{ art:"geaendert", bereich, weltId }`; die Handys laden den Bereich neu, die Anzeige bekommt die Orte der aktiven Welt (`sicht.js`).
-- **Texterkennung**: Die OCR des Boards bedient `/api/orte/auslesen` im Format der Companion (`fuerCompanion()`). Ist kein Seed-Map-Popup drauf, sucht sie eine **Banner-Anleitung** („Black Base“, „Cyan Bordure“ …); die Companion speichert daraus einen Bauplan.
+- **Texterkennung**: läuft seit Umbau Phase 3 am Handy (`companion/texterkennung.js`, tesseract.js im Browser, `fuerCompanion()`); der Server lädt dieselbe Auswertung per `node:vm`. Ist kein Seed-Map-Popup drauf, sucht sie eine **Banner-Anleitung** („Black Base“, „Cyan Bordure“ …); die Companion speichert daraus einen Bauplan.
 - **Welt-Import**: Biome kommen nur noch aus dem Weltordner (`.zip` aus der Dateien-App oder `.mcworld`). Die Companion liest ihn am Handy im Web Worker und schickt die Biome als Kacheln ans Board (`/api/welten/:id/biome`), je Welt ein Import. Einzelheiten in `companion/README.md` → Welt-Import.
 - **Anzeige steuern** (Board-Sheet der Companion): Welt auf der Anzeige, Titel, QR-Code; Orte anheften.
 - **Anzeige-Link**: Die Anzeige kann auf jedem Gerät im WLAN laufen (TV-Browser, Tablet). Jede Anzeige hat einen Link mit eigenem Schlüssel; die Companion zeigt ihn unter Board → Anzeigen (kopieren, QR-Code, umbenennen, neuer Schlüssel), die Konsole beim Start.
@@ -137,7 +137,7 @@ Daten: koordinaten-board/server/daten/daten.json
 **Seed-Map-Screenshot** (Chunkbase), nicht neu recherchieren:
 - Das Popup zeigt den Titel „Stronghold (Stairway)“, darunter X / (Y) / Z. Die Variante in Klammern ist der FeatureType.
 - Die Dimension steht im Dropdown oben.
-- Werbung kann das Popup verdecken. Die OCR meldet dann „kein Popup“, statt zu raten.
+- Werbung kann das Popup verdecken. Die Texterkennung meldet dann „nicht gefunden“, statt zu raten.
 
 ---
 

@@ -136,8 +136,12 @@ test('Welt-Import: Biome hochladen (auch über 1 MB), lesen, ersetzen, löschen'
   ws.close();
 });
 
-test('Companion-Dateien: konfig.js, Regeln, Karten, Welt-Import-Worker und Bibliothek werden als JavaScript ausgeliefert', async () => {
-  for (const pfad of ['/konfig.js', '/regeln.js', '/board-karten.js', '/biom-import.worker.js', '/biom-welt.js', '/biom-dekoder.js', '/biom-ids.js', '/vendor/mcbe-leveldb.js']) {
+test('Companion-Dateien: konfig.js, Regeln, Karten, Texterkennung, Welt-Import und tesseract.js werden ausgeliefert', async () => {
+  const sprache = await fetch(`${BASIS}/vendor/tesseract/eng.traineddata.gz`);
+  assert.equal(sprache.status, 200);
+  assert.equal((await sprache.arrayBuffer()).byteLength > 2_000_000, true, 'Sprachdaten (gz) kommen ganz an');
+  for (const pfad of ['/konfig.js', '/regeln.js', '/board-karten.js', '/texterkennung.js', '/biom-import.worker.js', '/biom-welt.js', '/biom-dekoder.js', '/biom-ids.js',
+    '/vendor/mcbe-leveldb.js', '/vendor/tesseract/tesseract.min.js', '/vendor/tesseract/worker.min.js', '/vendor/tesseract/tesseract-core-simd-lstm.wasm.js']) {
     const res = await fetch(BASIS + pfad);
     assert.equal(res.status, 200, pfad);
     assert.ok(res.headers.get('content-type').startsWith('application/javascript'), `${pfad}: ${res.headers.get('content-type')}`);
@@ -381,19 +385,6 @@ test('Rüstungs-Baukasten wird ausgeliefert (Texturen, Module, Manifest)', async
     assert.equal(res.status, 200, pfad);
     assert.ok(res.headers.get('content-type').startsWith(typ), `${pfad}: ${res.headers.get('content-type')}`);
   }
-});
-
-test('Screenshot auslesen: Banner-Anleitung liefert banner statt Ort', { timeout: 60_000 }, async () => {
-  const max = await beitreten('Max');
-  const form = new FormData();
-  const bild = readFileSync(fileURLToPath(new URL('../../../referenz/banner/rezept-beispiel.jpg', import.meta.url)));
-  form.append('datei', new Blob([bild], { type: 'image/jpeg' }), 'rezept.jpg');
-  const res = await fetch(`${BASIS}/api/orte/auslesen`, { method: 'POST', headers: { authorization: `Bearer ${max}` }, body: form });
-  const d = await res.json();
-  assert.equal(res.status, 200);
-  assert.equal(d.erkannt, null);
-  assert.equal(d.banner.basis, 'black');
-  assert.deepEqual(d.banner.ebenen.map((e) => e.muster), ['border', 'rhombus', 'border', 'flower', 'square_top_left', 'square_bottom_right']);
 });
 
 test('Änderungen gehen live an alle, Daten überstehen einen Neustart', async () => {

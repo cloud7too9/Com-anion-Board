@@ -1239,6 +1239,7 @@ button.switch { padding:0; }
 
 <script src="konfig.js"></script>
 <script src="regeln.js"></script>
+<script src="texterkennung.js"></script>
 <script src="board-karten.js"></script>
 <script src="biom-ids.js"></script>
 <script>
@@ -1453,10 +1454,10 @@ function koordinatenErkennen(text){
    PUT    /orte/instanzen/:id/angeheftet { angeheftet } → { instanz }  (groß auf der Anzeige)
    PUT    /orte/instanzen/:id/erledigt { erledigt } → { instanz }  (instanz.erledigt = { von, am } | null)
    DELETE /orte/instanzen/:id                → { ok:true }
-   POST   /orte/auslesen  (multipart „datei“) → { erkannt:{ titel, kategorie, variante, dimension,
-                                                  x, y|null, z } | null,
-                                        banner:{ basis|null, ebenen:[{ muster, farbe }], unklar:[text] } | null }
-                                      (erst Seed-Map-Popup, sonst Banner-Anleitung „Black Base“, „Cyan Bordure“ …)
+   (Screenshots liest das Handy seit Umbau Phase 3 selbst aus: TEXTERKENNUNG.screenshotAuslesen(datei) in
+    texterkennung.js liefert { erkannt:{ titel, kategorie, variante, dimension, x, y|null, z } | null,
+    banner:{ basis|null, ebenen:[{ muster, farbe }], unklar:[text] } | null } – erst Seed-Map-Popup,
+    sonst Banner-Anleitung „Black Base“, „Cyan Bordure“ …; im DEMO-Modus antwortet der Mock /orte/auslesen)
    IDs neuer Einträge (Orte, Portale, Banner, Rüstungs-Sets) erzeugt das Handy: id = neueEintragId()
    (UUID, regeln.js). Der Server prüft sie (400) und lehnt doppelte ab (409); ohne id vergibt er eine.
    Er speichert dazu erstellerId (stabile Benutzer-ID, bis zu den Accounts „unbekannt“).
@@ -2517,6 +2518,16 @@ async function formularSpeichern(){
 }
 
 // --- Screenshot-Prüfliste ------------------------------------------------------
+/** Screenshot auslesen: am Handy selbst (texterkennung.js, tesseract.js im Browser, Umbau Phase 3);
+ *  im DEMO-Modus der Mock. Ergebnis wie eine API-Antwort: { ok, status, data:{ erkannt, banner } } */
+async function screenshotAuslesen(datei){
+  if(DEMO.enabled){ const fd = new FormData(); fd.append("datei", datei); return api("/orte/auslesen", { method:"POST", body:fd }); }
+  try { return { ok:true, status:200, data: await TEXTERKENNUNG.screenshotAuslesen(datei) }; }
+  catch(f){
+    console.error("Texterkennung:", f);
+    return { ok:false, status:0, data:{ error:"texterkennung", message:"Texterkennung fehlgeschlagen – noch einmal versuchen (beim ersten Mal lädt sie etwa 7 MB)." } };
+  }
+}
 let importLaeuft = false;
 function importStarten(dateien){
   for(const datei of dateien){
@@ -2532,8 +2543,7 @@ async function importAbarbeiten(){
   let e;
   while((e = st.importe.find((x) => x.status === "wartet"))){
     e.status = "lese"; importRendern();
-    const fd = new FormData(); fd.append("datei", e.datei);
-    const r = await api("/orte/auslesen", { method:"POST", body:fd });
+    const r = await screenshotAuslesen(e.datei);
     if(!r.ok){ e.status = "fehler"; e.meldungen = [["bad", meldungAus(r)]]; importRendern(); continue; }
     const k = r.data?.erkannt;
     if(!k && r.data?.banner){ await bannerImport(e, r.data.banner); importRendern(); continue; }

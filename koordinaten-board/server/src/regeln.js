@@ -24,7 +24,7 @@ const NAMEN = [
 const KARTEN_NAMEN = ['BOARD_KARTEN', 'strukturName', 'zahl'];
 
 /** Führt die Scripts nacheinander in einem Kontext aus (gemeinsame Globals wie im Browser) und holt die Namen heraus */
-function scriptsLaden(dateien, namen) {
+export function scriptsLaden(dateien, namen) {
   const kontext = vm.createContext({});
   for (const datei of dateien) new vm.Script(readFileSync(datei, 'utf8'), { filename: datei }).runInContext(kontext);
   return new vm.Script(`({ ${namen.join(', ')} })`).runInContext(kontext);

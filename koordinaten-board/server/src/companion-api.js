@@ -3,10 +3,7 @@
 // `geaendert` den Bereich, damit Handys und Anzeige neu laden bzw. neu zeichnen.
 import QRCode from 'qrcode';
 import { DatenFehler } from './daten.js';
-import { screenshotAuslesen, fuerCompanion } from './erkennung.js';
-import { bannerAuslesen } from './banner-erkennung.js';
 
-const BILDER = ['image/jpeg', 'image/png', 'image/webp'];
 // Ein Welt-Import schickt alle Kacheln auf einmal (je 2048 Byte als Base64, höchstens MAX_KACHELN aus regeln.js)
 const BIOME_GRENZE = 64 * 1024 * 1024;
 
@@ -62,20 +59,7 @@ export async function companionApi(app, { daten, nutzer, geaendert, anzeigeLink 
     geaendert('orte', weltId);
     return { ok: true };
   });
-  // Screenshot auslesen (lokale OCR des Boards) – das Bild wird nicht gespeichert.
-  // Erst als Seed-Map-Popup (Ort), sonst als Banner-Anleitung (banner).
-  app.post('/orte/auslesen', async (req) => {
-    const teil = await req.file();
-    if (!teil) throw new DatenFehler(400, 'Keine Datei');
-    if (!BILDER.includes(teil.mimetype)) {
-      teil.file.resume();
-      throw new DatenFehler(415, 'Nur Bilder (JPG, PNG, WebP)');
-    }
-    const bild = await teil.toBuffer();
-    const { erkannt } = await screenshotAuslesen(bild);
-    const banner = erkannt ? null : await bannerAuslesen(bild, teil.mimetype);
-    return { erkannt: fuerCompanion(erkannt), banner };
-  });
+  // Screenshots liest das Handy seit Umbau Phase 3 selbst aus (companion/texterkennung.js); /orte/auslesen gibt es nicht mehr.
 
   // ---- Welt-Import: Biome je Welt (am Handy aus .mcworld/.zip gelesen, Regeln: biomImportPruefen) ----
   app.get('/welten/:id/biome', async (req) => daten.biomeLesen(req.params.id));

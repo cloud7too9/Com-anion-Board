@@ -102,9 +102,9 @@ Git: ein Commit je Frontend, Playwright-Tests in `companion/tests` vor dem Push.
 
 ### Phase 3: Texterkennung ins Handy · Branch `umbau/ocr-im-browser`
 
-- [ ] Auswertung aus `erkennung.js`, `banner-erkennung.js`, `bildvorbereitung.js` in die Companion holen, `tesseract.js` läuft dort im Browser, Canvas ersetzt `jpeg-js` und `pngjs`
-- [ ] `/api/orte/auslesen` und `tesseract.js` aus dem Server entfernen
-- [ ] Erkennungs-Tests auf die Browser-Version umziehen
+- [x] Auswertung aus `erkennung.js`, `banner-erkennung.js`, `bildvorbereitung.js` in die Companion holen, `tesseract.js` läuft dort im Browser, Canvas ersetzt `jpeg-js` und `pngjs` *(05.10.2026: `companion/texterkennung.js`, klassisches Script wie `regeln.js`; tesseract.js lokal in `companion/vendor/tesseract/`, kopiert mit `tools/tesseract-kopieren.mjs`; nur der SIMD-Kern, Geräte ohne SIMD holen ihn vom CDN)*
+- [x] `/api/orte/auslesen` und `tesseract.js` aus dem Server entfernen *(05.10.2026; auch `jpeg-js` und `@fastify/multipart`; `pngjs` bleibt für die Banner-Vorschau der Widgets)*
+- [x] Erkennungs-Tests auf die Browser-Version umziehen *(05.10.2026: die reinen Auswertungs-Tests laufen weiter im Server gegen `companion/texterkennung.js` per `node:vm`; die echte OCR prüft `companion/tests/live.test.mjs` im Browser)*
 
 Das ist der größte RAM-Gewinn auf dem Pi. Git: erst Browser-Version committen und testen, Server-Teil in einem eigenen Commit löschen.
 

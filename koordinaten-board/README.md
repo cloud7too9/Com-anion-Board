@@ -2,7 +2,7 @@
 
 Lokales Board für Minecraft-Koordinaten und **der Server der Companion**. Ein Gerät im Raum (Laptop, Mini-PC, Raspberry Pi am TV) zeigt die Orte der aktiven Welt groß an. Alle anderen öffnen per QR-Code die **Companion** am Handy, die das Board selbst ausliefert: Orte (am schnellsten per **Screenshot aus der Seed Map**), Sammelobjekte, Portal-Verbindungen, Banner und Rüstungs-Sets – alle Daten liegen auf dem Board.
 
-Alles läuft offline im eigenen Netz: keine Cloud, kein Konto, die Texterkennung passiert lokal auf dem Board-Gerät.
+Alles läuft offline im eigenen Netz: keine Cloud, kein Konto; die Texterkennung passiert seit Umbau Phase 3 am Handy selbst (im Browser).
 
 ## Funktionen
 
@@ -20,7 +20,7 @@ Alles läuft offline im eigenen Netz: keine Cloud, kein Konto, die Texterkennung
 - Der Server liefert die Companion aus (`../companion/companion-prototyp.html`, per `COMPANION_DATEI` austauschbar). Den QR-Code der Anzeige mit der normalen Kamera-App scannen → die Companion öffnet sich mit der PIN → Name eingeben → beigetreten.
 - Alle Bereiche arbeiten auf den Daten des Boards (`server/daten/daten.json`): Welten mit Seed, Orte der Karte, Sammelobjekte, Portal-Verbindungen, Banner, Rüstungs-Sets. Änderungen kommen bei allen Handys live an.
 - Der **Rüstungs-Baukasten** der Companion (`companion/ruestungs-baukasten/`: Texturen, fertige Icons, `baukasten.js`, `figur3d.js`, `manifest.json`) wird unter `/ruestungs-baukasten/` ausgeliefert. Erst über http kann die Companion die Texturen umfärben und die 3D-Figur bauen.
-- **Screenshot auslesen** über die lokale Texterkennung des Boards (`/api/orte/auslesen`): Kategorie, Variante (die Klammer im Titel, z. B. „Stairway“), X/(Y)/Z und Dimension. Kleine OCR-Fehler werden korrigiert.
+- **Screenshot auslesen** macht das Handy selbst (`companion/texterkennung.js`, tesseract.js im Browser; Umbau Phase 3): Kategorie, Variante (die Klammer im Titel, z. B. „Stairway“), X/(Y)/Z und Dimension. Kleine OCR-Fehler werden korrigiert. Der Server liefert dafür nur `texterkennung.js` und `vendor/tesseract/` aus und lädt dieselbe Auswertung per `node:vm` (`server/src/texterkennung.js`) für seine Feature-Liste und Tests.
 - **Banner-Anleitungen** („Black Base“, „Cyan Bordure“ …) erkennt dieselbe Route, wenn kein Seed-Map-Popup drauf ist: Das Bild wird vergrößert und in Schwarz-Weiß umgewandelt (`bildvorbereitung.js`, sonst liest Tesseract weiße Schrift auf Grau nicht), die Zeilen werden unscharf den englischen Farb- und Musternamen aus `regeln.js` zugeordnet (`banner-erkennung.js`).
 - Geprüft wird mit denselben Regeln wie in der Companion: Der Server lädt `../companion/regeln.js` (`server/src/regeln.js`).
 - **Anzeige steuern** (Board-Sheet der Companion): Welt auf der Anzeige, Titel, QR-Code zeigen; Orte im Detail „Auf der Anzeige anheften“.
@@ -81,7 +81,7 @@ Ist ein Popup von Werbung verdeckt oder nicht aufgeklappt, meldet das Board „K
 ```bash
 npm run dev:server    # Server mit Auto-Neustart auf :3000
 npm run dev:client    # Vite auf :5173 (leitet /api und /ws an :3000 weiter)
-npm test              # Server-Tests: Daten, Companion-API, Regeln, Erkennung, Karten, Netzwerk, PIN-Sperre
+npm test              # Server-Tests: Daten, Companion-API, Regeln, Auswertung der Texterkennung, Karten, Netzwerk, PIN-Sperre
 ```
 
 Aufbau:
@@ -94,15 +94,13 @@ server/src/regeln.js        lädt ../companion/regeln.js (und board-karten.js) p
 server/src/widgets.js       Widget-Typ + Quelle → Karte fürs Dashboard (GET /api/widgets/:typ)
 server/src/layout.js        Widget-Layout einer Anzeige prüfen (Form, Widget-Typen, Grenzen)
 server/src/sicht.js         Orte der aktiven Welt in der Form, die die Anzeige kennt
-server/src/erkennung.js     OCR (tesseract.js) + Auswertung des Seed-Map-Popups, fuerCompanion()
-server/src/banner-erkennung.js  Banner-Anleitung → Grundfarbe + Ebenen
-server/src/bildvorbereitung.js  JPEG/PNG vergrößern, Schwarz-Weiß (jpeg-js, pngjs)
+server/src/texterkennung.js lädt ../companion/texterkennung.js per node:vm: Feature-Liste und Auswertung der Texterkennung (OCR selbst läuft am Handy)
 server/src/zeigen.js        „Aufs Board“: Karten vom Handy prüfen
 server/src/sperre.js        Sperre nach falschen PINs
 client/src/anzeige/         Große Anzeige (Gezeigt.tsx: geworfene Karte) – der Client ist nur noch die Anzeige
 ```
 
-Neue Feature-Typen für die Texterkennung: Liste `FEATURES` in `server/src/erkennung.js`. Kategorien, Biome und Regeln stehen in `../companion/regeln.js`.
+Neue Feature-Typen für die Texterkennung: Liste `FEATURES` in `../companion/texterkennung.js`. Kategorien, Biome und Regeln stehen in `../companion/regeln.js`.
 
 ## Daten
 

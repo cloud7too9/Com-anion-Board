@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { seedMapAuswerten, titelBereinigen, kategorieRaten, fuerCompanion } from '../src/erkennung.js';
+import { texterkennung } from '../src/texterkennung.js';
+
+// Dieselben Funktionen, die das Handy benutzt (companion/texterkennung.js), per node:vm geladen
+const { seedMapAuswerten, titelBereinigen, kategorieRaten, fuerCompanion } = texterkennung;
 
 const zeilen = (...texte) => texte.map((text) => ({ text }));
 

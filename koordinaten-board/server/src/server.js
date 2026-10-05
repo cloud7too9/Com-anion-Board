@@ -2,7 +2,6 @@
 // liefert die Companion aus, hält die gemeinsamen Daten (daten.json) und synchronisiert live.
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
-import fastifyMultipart from '@fastify/multipart';
 import fastifyWebsocket from '@fastify/websocket';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
@@ -17,7 +16,6 @@ import { COMPANION_ORDNER } from './regeln.js';
 import { besteAdresse } from './netzwerk.js';
 import { kartePruefen } from './zeigen.js';
 import { widgetKarte, widgetQuellen } from './widgets.js';
-import { erkennungBeenden } from './erkennung.js';
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
@@ -157,7 +155,6 @@ app.options('/api/*', async (req, reply) =>
     .header('Access-Control-Max-Age', '600')
     .code(204)
     .send());
-await app.register(fastifyMultipart, { limits: { fileSize: 25 * 1024 * 1024, files: 1 } });
 await app.register(fastifyWebsocket);
 // Leerer Rumpf bei „Content-Type: application/json“ (z. B. DELETE) ist kein Fehler
 app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, rumpf, fertig) => {
@@ -367,11 +364,11 @@ setInterval(() => {
 
 const OHNE_CACHE = { 'cache-control': 'no-cache' };
 app.get('/', (req, reply) => reply.headers(OHNE_CACHE).sendFile(COMPANION_DATEI, COMPANION_ORDNER));
-for (const datei of ['konfig.js', 'regeln.js', 'board-karten.js']) {
+for (const datei of ['konfig.js', 'regeln.js', 'board-karten.js', 'texterkennung.js']) {
   app.get(`/${datei}`, (req, reply) => reply.headers(OHNE_CACHE).sendFile(datei, COMPANION_ORDNER));
 }
 await app.register(fastifyStatic, { root: path.join(COMPANION_ORDNER, 'icons'), prefix: '/icons/', maxAge: '7d' });
-// Welt-Import: Worker und Dekoder (ES-Module) liest das Handy selbst; die Bibliothek liegt in vendor/
+// Welt-Import: Worker und Dekoder (ES-Module) liest das Handy selbst; die Bibliothek liegt in vendor/ (dort auch tesseract.js für die Texterkennung)
 for (const datei of ['biom-ids.js', 'biom-dekoder.js', 'biom-welt.js', 'biom-import.worker.js']) {
   app.get(`/${datei}`, (req, reply) => reply.headers(OHNE_CACHE).sendFile(datei, COMPANION_ORDNER));
 }
@@ -413,7 +410,6 @@ app.setNotFoundHandler((req, reply) => {
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, async () => {
     await daten.speichern().catch(() => {});
-    await erkennungBeenden().catch(() => {});
     process.exit(0);
   });
 }
