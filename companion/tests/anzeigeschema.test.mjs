@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, rmSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { companionAusliefern, threeUmleiten, CHROMIUM_OPTIONEN } from "./hilfen.mjs";
+import { companionAusliefern, threeUmleiten, CHROMIUM_OPTIONEN, anzeigeLinkQuery } from "./hilfen.mjs";
 
 const HIER = fileURLToPath(new URL(".", import.meta.url));
 const DIR = path.join(HIER, "bilder");
@@ -78,7 +78,7 @@ try {
 
   // ---- Knöpfe „Aufs Board“ in allen Details, echte Anzeige je Schema -----------------
   const anzeige = await browser.newPage({ viewport: { width: 1600, height: 900 } });
-  await anzeige.goto(`${BOARD}/anzeige`);
+  await anzeige.goto(`${BOARD}/anzeige${await anzeigeLinkQuery(path.join(TMP, "daten"))}`);
   await anzeige.waitForSelector(".anzeige");
   const zeigen = async (oeffnen, name) => {
     await p.evaluate(oeffnen); await p.waitForTimeout(350);

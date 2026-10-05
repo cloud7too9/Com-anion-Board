@@ -104,7 +104,7 @@ Handy ──http──▶ Board-Server :3000
                 ├─ /biom-*.js, /vendor/…  Welt-Import (Worker im Browser des Handys)
                 ├─ /api/…            Companion-API (daten.js) + Beitreten + OCR (/api/orte/auslesen)
                 ├─ /ws               Live: geaendert, zustand, gezeigt, teilnehmer
-                └─ /anzeige          React-Anzeige (localhost oder mit Anzeige-Link): Orte der aktiven Welt
+                └─ /anzeige          React-Anzeige (nur mit Anzeige-Link): Orte der aktiven Welt
 Daten: koordinaten-board/server/daten/daten.json
 ```
 

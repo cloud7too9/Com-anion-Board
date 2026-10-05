@@ -1,5 +1,6 @@
 @echo off
 rem Koordinaten-Board starten: Server + Anzeige im Vollbild (Edge-Kiosk)
+rem Die Anzeige braucht auch auf dem Board-Rechner ihren Anzeige-Link (server\daten\anzeige-link.txt, schreibt der Server).
 cd /d "%~dp0"
 
 if not exist server\node_modules (
@@ -18,8 +19,8 @@ if errorlevel 1 (
   call "%~dp0firewall-freigeben.bat"
 )
 
-rem Anzeige nach kurzer Wartezeit im Vollbild oeffnen
-start "" cmd /c "timeout /t 3 >nul && start msedge --kiosk http://localhost:3000/anzeige --edge-kiosk-type=fullscreen --no-first-run"
+rem Anzeige nach kurzer Wartezeit im Vollbild oeffnen - mit dem Anzeige-Link aus der Datei des Servers
+start "" cmd /c "timeout /t 3 >nul && call "%~dp0anzeige-oeffnen.bat""
 
 node server\src\server.js
 goto :eof

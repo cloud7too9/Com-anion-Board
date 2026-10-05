@@ -7,7 +7,7 @@ import { zugangHolen, zugangParameter, type Zugang } from "../lib/zugang";
  * Verbindung des Dashboards zum Board-Server.
  * - „board“: Karten von GET /api/widgets/:typ, nach jedem `geaendert` über /ws lädt alles neu.
  * - „beispiel“: kein Board erreichbar (z. B. `npm run dev` allein) → feste Beispielkarten.
- * Zwei Rollen: die **Anzeige** (Anzeige-Link oder localhost; liest ihr Layout, meldet ihre Reihen)
+ * Zwei Rollen: die **Anzeige** (nur mit Anzeige-Link; liest ihr Layout, meldet ihre Reihen)
  * und die **Steuerung** am Handy („Anzeige anordnen“, angemeldet mit dem Token der Companion).
  */
 export type BoardModus = "pruefen" | "board" | "beispiel";
@@ -23,7 +23,7 @@ interface BoardState {
   /** steigt bei jeder Änderung am Board – Widgets laden dann ihre Karte neu */
   version: number;
   zugang: Zugang | null;
-  /** Welche Anzeige dieses Gerät ist (Anzeige-Link, localhost: „Board“); null ohne Zugang */
+  /** Welche Anzeige dieses Gerät ist (aus dem Anzeige-Link); null ohne Zugang */
   anzeige: { id: string; name: string } | null;
   /** Layout der Anzeige vom Board: undefined noch nicht geladen, null noch keins gespeichert */
   layout: AnzeigeLayout | null | undefined;

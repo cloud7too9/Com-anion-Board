@@ -49,7 +49,7 @@ Daneben laufen zwei unabhängige Stränge:
 | Widget-Registry von MainHub | `model/panel-registry.ts` | 6 Beispiel-Panels | wird durch das Companion-Register ersetzt |
 | Modul-Vertrag `BEREICHE` | `companion/companion-prototyp.html` (Abschnitt 9b) | `ansichten` nur dokumentiert: 1×1/2×1/2×2 auf 4 Spalten | **wird abgelöst** durch Register und Größen-Vertrag. Den Kommentar dort nachziehen. |
 | Anzeigeschemas `BOARD_KARTEN` | `companion-prototyp.html`, geprüft in `koordinaten-board/server/src/zeigen.js` | Ort, Sammelobjekt, Portal, Banner und Rüstung als allgemeine Karten | **wandern in den Server** (E3). Das Dashboard bekommt fertige Karten. |
-| Board-Anzeige | `koordinaten-board/client/` (React) unter `/anzeige` | Orte der aktiven Welt und „Aufs Board“. **Nur auf `localhost`** (`istLokal` in `server.js`), sonst nur mit `ANZEIGE_OFFEN=1`, dann aber für jedes Gerät im Netz und ohne Schutz | bleibt vorerst. Geht später in `/dashboard` auf. Bekommt vorher schon den Anzeige-Link (A6). |
+| Board-Anzeige | `koordinaten-board/client/` (React) unter `/anzeige` | Orte der aktiven Welt und „Aufs Board“. **Nur auf `localhost`** (`istLokal` in `server.js`), sonst nur mit `ANZEIGE_OFFEN=1`, dann aber für jedes Gerät im Netz und ohne Schutz *(überholt durch Umbau Phase 1: nur noch mit Anzeige-Link, `ANZEIGE_OFFEN` entfernt)* | bleibt vorerst. Geht später in `/dashboard` auf. Bekommt vorher schon den Anzeige-Link (A6). |
 | Daten | `koordinaten-board/server/src/daten.js` | IDs vom Server (`neueId`), Urheber als Name im Feld `von` | stabile Benutzer-ID, Client-IDs |
 | Beitreten | QR-Code → `/?pin=…`, Name frei, `sperre.js` | Board-PIN + freier Name | wird **Account mit PIN**, die Anmeldung erreicht man über den QR-Code (E9) |
 | Offline | `localStorage` für Verbindung und Name | kein Service Worker, keine IndexedDB | neu |
@@ -141,12 +141,12 @@ Grund: E4 und E5. Ein Bauplan dafür gibt es nicht.
 - **Anzeige-Link (Anzeige auf einem anderen Gerät als dem Server):**
   - Jede Anzeige bekommt am Server einen eigenen, zufälligen **Anzeige-Schlüssel**. Der Link lautet `http://<adresse>:3000/dashboard?anzeige=<id>&schluessel=<schluessel>`. Die Adresse ist dieselbe wie im QR-Code der Handys (`netzwerk.js`, `adresse.txt`, `OEFFENTLICHE_URL`).
   - Wer den Link öffnet, wird zu genau dieser Anzeige. Der Browser merkt sich den Schlüssel, damit ein Neustart des TVs ohne Link geht.
-  - Der Server lässt die Anzeige-Verbindung (`/ws` mit Rolle `anzeige`, `/api/anzeige`) zu, wenn sie von `localhost` kommt **oder** einen gültigen Schlüssel trägt. `ANZEIGE_OFFEN=1` bleibt als Notschalter.
+  - Der Server lässt die Anzeige-Verbindung (`/ws` mit Rolle `anzeige`, `/api/anzeige`) zu, wenn sie von `localhost` kommt **oder** einen gültigen Schlüssel trägt. `ANZEIGE_OFFEN=1` bleibt als Notschalter. *(Überholt durch Umbau Phase 1: nur noch der Schlüssel zählt.)*
   - **Wo der Link steht:**
     - in der Companion im Board-Sheet unter „Anzeigen“: anlegen, umbenennen, Link kopieren, als QR-Code zeigen (zum Abscannen mit dem Tablet), Schlüssel neu erzeugen (macht alte Links ungültig)
     - in der Konsole beim Start, neben der Handy-Adresse: `Anzeige auf anderem Gerät: http://…`
     - in `koordinaten-board/README.md` unter Start, mit dem Hinweis auf die Firewall (Private Netzwerke erlauben)
-  - Wer Anzeigen anlegt: jedes beigetretene Handy, nach B2 jeder Account. Beim ersten Start legt der Server eine Anzeige „Board“ für `localhost` an.
+  - Wer Anzeigen anlegt: jedes beigetretene Handy, nach B2 jeder Account. Beim ersten Start legt der Server eine Anzeige „Board“ an *(seit Umbau Phase 1 ebenfalls nur mit Link erreichbar)*.
   - **Gilt auch für `/anzeige`**, solange es sie noch gibt. Dieser Teil hängt nicht am Widget-Dashboard und kann deshalb schon vor A1 als kleiner Schritt kommen (Branch `board/anzeige-link`).
   - Tests: Zugriff ohne Schlüssel von außen → 403; mit gültigem Schlüssel → erlaubt; nach dem Neu-Erzeugen ist der alte Schlüssel → 403.
 - Commits: „Anzeige-Link für andere Geräte“, „Anzeigen-Layout am Server“, „Dashboard unter /dashboard“, „Anordnen am Handy“

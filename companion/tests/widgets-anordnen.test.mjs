@@ -9,7 +9,7 @@ import { mkdirSync, mkdtempSync, rmSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { CHROMIUM_OPTIONEN } from "./hilfen.mjs";
+import { CHROMIUM_OPTIONEN, anzeigeLinkQuery } from "./hilfen.mjs";
 
 const HIER = fileURLToPath(new URL(".", import.meta.url));
 const DIR = path.join(HIER, "bilder");
@@ -43,10 +43,10 @@ try {
   await api("POST", "/api/orte/welten", { seed: "6889192652397090698" });
   const banner = (await api("POST", "/api/banner", { name: "Kreuz", basis: "white", ebenen: [{ muster: "cross", farbe: "red" }] })).banner;
 
-  // ---- Die Anzeige im Zimmer (Board-Gerät, localhost) meldet ihre Reihen ----
+  // ---- Die Anzeige im Zimmer (mit ihrem Anzeige-Link) meldet ihre Reihen ----
   const tv = await browser.newPage({ viewport: { width: 1600, height: 900 } });
   tv.on("pageerror", (e) => fehler.push(`TV: ${e.message}`));
-  await tv.goto(`${BOARD}/dashboard/`);
+  await tv.goto(`${BOARD}/dashboard/${await anzeigeLinkQuery(path.join(TMP, "daten"))}`);
   await tv.waitForSelector('[data-panel-id="w-sammelstatus"] [data-testid="karte"]');
   const tvReihen = await tv.$eval('[data-testid="raster-flaeche"]', (f) => Number(f.dataset.grid.split("x")[1]));
   pruefe(await warteBis(async () => (await api("GET", "/api/anzeigen")).anzeigen[0].reihen === tvReihen), `Anzeige „Board“ meldet ${tvReihen} Reihen`);

@@ -173,8 +173,7 @@ Bauplan: `planung/bauplaene/Bauplan-Bereichs-Themes.md`.
 
 - **Am Board** (`GET /api/server` meldet das Board) ist das Dashboard reine
   Anzeige (`nurAnzeige` im Store): Es lädt das Layout seiner Anzeige
-  (`GET /api/anzeige/layout`; welche Anzeige, sagt der Anzeige-Link, localhost
-  ohne Link ist „Board“), zeigt den aktiven Layer ohne Bearbeiten-Modus und
+  (`GET /api/anzeige/layout`; welche Anzeige, sagt der Anzeige-Link), zeigt den aktiven Layer ohne Bearbeiten-Modus und
   Layer-Umschalter, im Kopf „Anzeige <Name>“. Gespeichert wird nichts im
   Browser. Hat die Anzeige noch kein Layout, gilt das Start-Layout.
 - Ein neues Layout oder ein anderer aktiver Layer kommt **live** an

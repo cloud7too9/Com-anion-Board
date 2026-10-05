@@ -18,7 +18,7 @@ function lesen(): Zugang | null {
   }
 }
 
-/** Zugang aus dem Link (wird gemerkt) oder aus dem Speicher; null auf dem Board-Gerät selbst */
+/** Zugang aus dem Link (wird gemerkt) oder aus dem Speicher; null = kein Zugang, auch auf dem Board-Gerät selbst (Umbau Phase 1) */
 export function zugangHolen(suche = location.search): Zugang | null {
   const q = new URLSearchParams(suche);
   const anzeige = q.get("anzeige"), schluessel = q.get("schluessel");

@@ -143,7 +143,7 @@ test('Welt-Import: Worker, Dekoder und Bibliothek werden als JavaScript ausgelie
   }
 });
 
-// „Von außen“: über eine Netzwerkadresse dieses Rechners statt localhost – dann gilt die Anfrage nicht als lokal
+// „Von außen“: über eine Netzwerkadresse dieses Rechners statt localhost (seit Umbau Phase 1 gelten für beide dieselben Regeln)
 const AUSSEN = Object.values(networkInterfaces()).flat().find((n) => n && n.family === 'IPv4' && !n.internal)?.address;
 
 test('Anzeige-Link: von außen nur mit gültigem Schlüssel, neuer Schlüssel macht den alten ungültig', { skip: !AUSSEN && 'keine Netzwerkadresse' }, async () => {
@@ -157,8 +157,8 @@ test('Anzeige-Link: von außen nur mit gültigem Schlüssel, neuer Schlüssel ma
   assert.equal(link.pathname, '/anzeige');
   const aussen = (pfad, query = '') => fetch(`http://${AUSSEN}:${PORT}${pfad}${query}`);
 
-  // localhost darf immer, von außen nur mit Link
-  assert.equal((await fetch(`${BASIS}/api/anzeige`)).status, 200);
+  // Ohne Link gesperrt, auch auf dem Board-Gerät selbst (localhost); mit Link erlaubt
+  assert.equal((await fetch(`${BASIS}/api/anzeige`)).status, 403, 'localhost ohne Link');
   assert.equal((await aussen('/api/anzeige')).status, 403);
   const mitLink = await aussen('/api/anzeige', link.search);
   assert.equal(mitLink.status, 200);
@@ -199,8 +199,10 @@ test('Widgets: Karte je Widget-Typ aus der aktiven Welt, Quellen, leerer Zustand
   await anfrage('PUT', `/api/sammelobjekte/welten/${welt.id}/rib`, max, { gefunden: true });
   await anfrage('POST', `/api/portale/welten/${welt.id}`, max, { name: 'Basis', oberwelt: { x: 800, y: 64, z: 80 }, nether: { x: 100, y: 64, z: 10 } });
   const banner = (await anfrage('POST', '/api/banner', max, { name: 'Kreuz', basis: 'white', ebenen: [{ muster: 'cross', farbe: 'red' }] })).daten.banner;
-  // localhost ist die Anzeige des Board-Geräts – ohne Token
-  const widget = async (typ, quelle) => anfrage('GET', `/api/widgets/${typ}${quelle ? `?quelle=${quelle}` : ''}`);
+  // Die Anzeige liest mit ihrem Anzeige-Link (ohne Token); ohne Link und ohne Token ist auch localhost gesperrt
+  const link = new URL((await anfrage('GET', '/api/anzeigen', max)).daten.anzeigen[0].link).search;
+  assert.equal((await anfrage('GET', '/api/widgets/sammelobjekte.status')).status, 403, 'localhost ohne Link und Token');
+  const widget = async (typ, quelle) => anfrage('GET', `/api/widgets/${typ}${link}${quelle ? `&quelle=${quelle}` : ''}`);
 
   let r = await widget('karte.einzelkoordinate', festung.id);
   assert.equal(r.status, 200);
@@ -224,13 +226,13 @@ test('Widgets: Karte je Widget-Typ aus der aktiven Welt, Quellen, leerer Zustand
   assert.deepEqual((await widget('karte.einzelkoordinate', festung.id)).daten, { karte: null, hinweis: 'Die Quelle gibt es nicht mehr' });
   assert.equal((await widget('karte.gibtsnicht')).status, 404);
 
-  // Quellen zum Auswählen beim Hinzufügen
-  r = await anfrage('GET', '/api/widgets/banner.banner/quellen');
+  // Quellen zum Auswählen beim Hinzufügen (fragt das Handy, mit Token)
+  r = await anfrage('GET', '/api/widgets/banner.banner/quellen', max);
   assert.equal(r.daten.quelle, 'banner');
   assert.deepEqual(r.daten.quellen.find((q) => q.id === banner.id), { id: banner.id, name: 'Kreuz' });
-  r = await anfrage('GET', '/api/widgets/sammelobjekte.einzelobjekt/quellen');
+  r = await anfrage('GET', '/api/widgets/sammelobjekte.einzelobjekt/quellen', max);
   assert.deepEqual(r.daten.quellen.find((q) => q.id === 'rib'), { id: 'rib', name: 'Rippenzier', unter: 'Netherfestung · gefunden' });
-  assert.deepEqual((await anfrage('GET', '/api/widgets/portale.verbindungen/quellen')).daten, { quelle: null, quellen: [] });
+  assert.deepEqual((await anfrage('GET', '/api/widgets/portale.verbindungen/quellen', max)).daten, { quelle: null, quellen: [] });
 
   // Von außen nur mit Anzeige-Link oder als angemeldetes Handy
   if (AUSSEN) {
@@ -263,16 +265,19 @@ test('Widget-Dashboard unter /dashboard: Anzeige-Link bleibt beim Umleiten, eige
 test('Widget-Layout: Handy speichert, Anzeige liest ihres und meldet ihre Reihen, live über /ws', async () => {
   const max = await beitreten('Max');
   const [board] = (await anfrage('GET', '/api/anzeigen', max)).daten.anzeigen;
-  // Anzeige auf dem Board-Gerät (localhost, ohne Link) ist „Board“
-  let r = await anfrage('GET', '/api/anzeige/layout');
+  // Die Anzeige „Board“ liest mit ihrem Link; ohne Link ist auch localhost gesperrt
+  const q = new URL(board.link).search;
+  assert.equal((await anfrage('GET', '/api/anzeige/layout')).status, 403, 'localhost ohne Link');
+  let r = await anfrage('GET', `/api/anzeige/layout${q}`);
   assert.deepEqual([r.status, r.daten.anzeige.id], [200, board.id]);
-  const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws?rolle=anzeige`);
+  const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws${q}&rolle=anzeige`);
   const nachrichten = [];
   ws.onmessage = (e) => nachrichten.push(JSON.parse(e.data));
   await new Promise((ok) => { ws.onopen = ok; });
 
-  assert.deepEqual((await anfrage('PUT', '/api/anzeige/reihen', null, { reihen: 24 })).daten, { reihen: 24 });
-  assert.equal((await anfrage('PUT', '/api/anzeige/reihen', null, { reihen: 'x' })).status, 400);
+  assert.equal((await anfrage('PUT', '/api/anzeige/reihen', null, { reihen: 24 })).status, 403, 'Reihen melden nur mit Link');
+  assert.deepEqual((await anfrage('PUT', `/api/anzeige/reihen${q}`, null, { reihen: 24 })).daten, { reihen: 24 });
+  assert.equal((await anfrage('PUT', `/api/anzeige/reihen${q}`, null, { reihen: 'x' })).status, 400);
   assert.equal((await anfrage('GET', '/api/anzeigen', max)).daten.anzeigen.find((a) => a.id === board.id).reihen, 24);
 
   const layout = { layer: [{ id: 'l1', name: 'Start', instanzen: [{ id: 'w1', typ: 'sammelobjekte.status', stufe: 'standard', x: 28, y: 0 }] }], aktiverLayer: 'l1' };
@@ -280,10 +285,10 @@ test('Widget-Layout: Handy speichert, Anzeige liest ihres und meldet ihre Reihen
   r = await anfrage('PUT', `/api/anzeigen/${board.id}/layout`, max, layout);
   assert.equal(r.status, 200);
   assert.equal((await anfrage('PUT', `/api/anzeigen/${board.id}/layout`, max, { layer: [] })).status, 422);
-  r = await anfrage('GET', '/api/anzeige/layout');
+  r = await anfrage('GET', `/api/anzeige/layout${q}`);
   assert.deepEqual([r.daten.reihen, r.daten.layout.layer[0].instanzen[0].typ], [24, 'sammelobjekte.status']);
   assert.equal((await anfrage('PUT', `/api/anzeigen/${board.id}/vollbild`, max, { instanzId: 'w1' })).daten.vollbild, 'w1');
-  assert.equal((await anfrage('GET', '/api/anzeige/layout')).daten.vollbild, 'w1', 'die Anzeige sieht das Vollbild');
+  assert.equal((await anfrage('GET', `/api/anzeige/layout${q}`)).daten.vollbild, 'w1', 'die Anzeige sieht das Vollbild');
   assert.equal((await anfrage('PUT', `/api/anzeigen/${board.id}/vollbild`, max, { instanzId: 'gibt-es-nicht' })).status, 422);
   assert.equal((await anfrage('PUT', `/api/anzeigen/${board.id}/vollbild`, max, { instanzId: null })).daten.vollbild, null);
   await new Promise((ok) => setTimeout(ok, 150));

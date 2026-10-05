@@ -9,7 +9,7 @@ import { mkdirSync, mkdtempSync, rmSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { tmpdir, networkInterfaces } from "node:os";
 import path from "node:path";
-import { CHROMIUM_OPTIONEN } from "./hilfen.mjs";
+import { CHROMIUM_OPTIONEN, anzeigeLinkQuery } from "./hilfen.mjs";
 
 const HIER = fileURLToPath(new URL(".", import.meta.url));
 const DIR = path.join(HIER, "bilder");
@@ -51,10 +51,10 @@ try {
   await api("POST", `/api/portale/welten/${welt.id}`, { name: "Eisenfarm", oberwelt: { x: 800, y: 64, z: 80 }, nether: { x: 100, y: 64, z: 10 } });
   const banner = (await api("POST", "/api/banner", { name: "Kreuz", basis: "white", ebenen: [{ muster: "cross", farbe: "red" }] })).banner;
 
-  // ---- Dashboard vom Board (localhost = Anzeige des Board-Geräts) ----
+  // ---- Dashboard vom Board (Anzeige „Board“ mit ihrem Anzeige-Link, auch auf dem Board-Gerät) ----
   const p = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   p.on("pageerror", (e) => fehler.push(e.message));
-  await p.goto(`${BOARD}/dashboard`);
+  await p.goto(`${BOARD}/dashboard${await anzeigeLinkQuery(path.join(TMP, "daten"))}`);
   await p.waitForSelector('[data-panel-id="w-sammelstatus"] [data-testid="karte"]');
   const karteText = (sel) => p.$eval(`${sel} [data-testid="karte"]`, (k) => k.textContent).catch(() => "");
   pruefe(new URL(p.url()).pathname === "/dashboard/" && !(await p.$('[data-testid="beispielkarten"]')), "Board liefert /dashboard aus, Karten vom Board (keine Beispielkarten)");

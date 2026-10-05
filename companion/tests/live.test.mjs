@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, rmSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { threeUmleiten, CHROMIUM_OPTIONEN } from "./hilfen.mjs";
+import { threeUmleiten, CHROMIUM_OPTIONEN, anzeigeLinkQuery } from "./hilfen.mjs";
 
 const HIER = fileURLToPath(new URL(".", import.meta.url));
 const DIR = path.join(HIER, "bilder");
@@ -205,7 +205,7 @@ try {
   // === Anzeige im Zimmer zeigt die aktive Welt ===================================
   const anzeige = await (await browser.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   anzeige.on("pageerror", (e) => fehler.push("Anzeige: " + e.message));
-  await anzeige.goto(`${BOARD}/anzeige`);
+  await anzeige.goto(`${BOARD}/anzeige${await anzeigeLinkQuery(path.join(TMP, "daten"))}`);
   await anzeige.waitForSelector(".anzeige");
   const anzeigeOrte = () => anzeige.$$eval(".a-zeile", (l) => l.map((z) => {
     const img = z.querySelector("img.kennblock");

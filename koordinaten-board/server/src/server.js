@@ -27,9 +27,8 @@ const CLIENT_DIST = path.resolve(HIER, '..', '..', 'client', 'dist');
 const DASHBOARD_DIST = path.join(COMPANION_ORDNER, 'widgets', 'dist');
 // Seite der Companion, die unter / ausgeliefert wird (später z. B. modul-a-live-karte.html)
 const COMPANION_DATEI = process.env.COMPANION_DATEI ?? 'companion-prototyp.html';
-// Anzeige darf vom Gerät selbst (localhost) oder mit Anzeige-Link (Anzeige + Schlüssel) geöffnet werden.
-// Notschalter für alles im Netz ohne Schutz: ANZEIGE_OFFEN=1
-const ANZEIGE_OFFEN = process.env.ANZEIGE_OFFEN === '1';
+// Anzeige nur mit Anzeige-Link (Anzeige + Schlüssel), auch auf dem Board-Gerät selbst (Umbau Phase 1):
+// hinter einem Tunnel käme sonst jede Anfrage aus dem Internet als „localhost“ herein.
 
 // ---------- PIN + Sitzungs-Signatur (bleiben über Neustarts erhalten) ----------
 
@@ -48,12 +47,13 @@ await mkdir(DATEN, { recursive: true });
 const PIN = process.env.RAUM_PIN ?? (await dauerwertLaden('pin.txt', () => String(randomInt(1000, 10000))));
 const GEHEIM = await dauerwertLaden('geheim.txt', () => randomBytes(32).toString('hex'));
 
+/** Kommt die Verbindung vom Gerät selbst (loopback)? Gibt keine Rechte mehr, hilft nur beim Adress-Lernen. */
 const istLokal = (req) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
-/** Darf diese Anfrage Anzeige sein? localhost, Notschalter oder gültiger Anzeige-Link (?anzeige=…&schluessel=…) */
+/** Darf diese Anfrage Anzeige sein? Nur mit gültigem Anzeige-Link (?anzeige=…&schluessel=…) */
 const anzeigeZugang = (req) => {
   const { anzeige, schluessel } = req.query ?? {};
   const mitLink = anzeige ? daten.anzeigeMitSchluessel(String(anzeige), String(schluessel ?? '')) : null;
-  return { erlaubt: Boolean(mitLink) || istLokal(req) || ANZEIGE_OFFEN, anzeige: mitLink };
+  return { erlaubt: Boolean(mitLink), anzeige: mitLink };
 };
 
 // Netzwerkadresse für QR-Code und Konsole – regelmäßig neu bestimmen (WLAN-Wechsel)
@@ -76,7 +76,7 @@ function lanAdresse(ip = qrIp()) {
   return `http://${ip}:${PORT}`;
 }
 
-/** Anzeige-Link für ein anderes Gerät im Netz – dieselbe Adresse wie im QR-Code der Handys */
+/** Anzeige-Link – dieselbe Adresse wie im QR-Code der Handys; ohne ihn ist kein Gerät Anzeige, auch das Board-Gerät nicht */
 const anzeigeLink = (a) => `${lanAdresse()}/anzeige?anzeige=${encodeURIComponent(a.id)}&schluessel=${encodeURIComponent(a.schluessel)}`;
 
 /** Merkt sich die IP, die ein anderes Gerät in der Adresszeile benutzt hat. */
@@ -168,7 +168,7 @@ app.get('/api/ich', async (req, reply) => {
 
 app.get('/api/anzeige', async (req, reply) => {
   const zugang = anzeigeZugang(req);
-  if (!zugang.erlaubt) return reply.code(403).send({ fehler: 'Anzeige nur mit Anzeige-Link oder auf dem Board-Gerät' });
+  if (!zugang.erlaubt) return reply.code(403).send({ fehler: 'Anzeige nur mit Anzeige-Link' });
   return {
     anzeige: zugang.anzeige && { id: zugang.anzeige.id, name: zugang.anzeige.name },
     beitrittsUrl: `${lanAdresse()}/?pin=${PIN}`,
@@ -180,14 +180,14 @@ app.get('/api/anzeige', async (req, reply) => {
 });
 
 // Widget-Dashboard (A6): Die Anzeige liest ihr Layout und meldet ihre Reihen. Welche Anzeige sie ist,
-// sagt der Anzeige-Link; das Board-Gerät selbst (localhost) ohne Link ist die erste Anzeige („Board“).
+// sagt der Anzeige-Link.
 function anzeigeVonAnfrage(req, reply) {
   const zugang = anzeigeZugang(req);
   if (!zugang.erlaubt) {
-    reply.code(403).send({ fehler: 'Anzeige nur mit Anzeige-Link oder auf dem Board-Gerät' });
+    reply.code(403).send({ fehler: 'Anzeige nur mit Anzeige-Link' });
     return null;
   }
-  return zugang.anzeige ?? daten.anzeigeLokal();
+  return zugang.anzeige;
 }
 app.get('/api/anzeige/layout', async (req, reply) => {
   const a = anzeigeVonAnfrage(req, reply);
@@ -212,13 +212,16 @@ await app.register(companionApi, {
   geaendert: (bereich, weltId = null) => {
     anAlle({ art: 'geaendert', bereich, weltId });
     if (['welten', 'orte', 'einstellungen'].includes(bereich)) anAlle({ art: 'zustand', zustand: anzeigeSicht(daten) });
-    if (bereich === 'anzeigen') veralteteAnzeigenTrennen();
+    if (bereich === 'anzeigen') {
+      veralteteAnzeigenTrennen();
+      anzeigeLinkMerken();
+    }
   },
   anzeigeLink,
 });
 
 // Widgets des Dashboards: fertige Karte je Widget-Typ (und Quelle) aus den Daten der aktiven Welt.
-// Lesen darf die Anzeige (localhost oder Anzeige-Link) und jedes angemeldete Handy.
+// Lesen darf die Anzeige (mit Anzeige-Link) und jedes angemeldete Handy.
 await app.register(async (widgets) => {
   widgets.addHook('onRequest', async (req, reply) => {
     if (!anzeigeZugang(req).erlaubt && !ident.werBistDu(req)) {
@@ -288,10 +291,9 @@ app.get('/ws', { websocket: true }, (socket, req) => {
   let verbindung;
   if (rolle === 'anzeige') {
     const zugang = anzeigeZugang(req);
-    if (!zugang.erlaubt) return socket.close(4003, 'Anzeige nur mit Anzeige-Link oder auf dem Board-Gerät');
-    // Nur wer allein über den Link hereinkam, fliegt raus, wenn der Schlüssel neu erzeugt wird
-    const nurLink = zugang.anzeige && !istLokal(req) && !ANZEIGE_OFFEN;
-    verbindung = { socket, rolle: 'anzeige', nutzer: null, zugang: nurLink ? { id: zugang.anzeige.id, schluessel: zugang.anzeige.schluessel } : null };
+    if (!zugang.erlaubt) return socket.close(4003, 'Anzeige nur mit Anzeige-Link');
+    // Wird der Schlüssel neu erzeugt, fliegt die Anzeige mit dem alten raus (veralteteAnzeigenTrennen)
+    verbindung = { socket, rolle: 'anzeige', nutzer: null, zugang: { id: zugang.anzeige.id, schluessel: zugang.anzeige.schluessel } };
   } else {
     const nutzer = ident.ausToken(token);
     if (!nutzer) return socket.close(4001, 'Nicht angemeldet');
@@ -382,14 +384,23 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   });
 }
 
-await app.listen({ port: PORT, host: '0.0.0.0' });
-console.log('\n  Koordinaten-Board läuft');
-console.log(`  Anzeige (dieses Gerät):  http://localhost:${PORT}/anzeige`);
-if (existsSync(DASHBOARD_DIST)) console.log(`  Widget-Dashboard:        http://localhost:${PORT}/dashboard`);
-console.log(`  Companion (Handys):      ${lanAdresse()}   PIN ${PIN}`);
-for (const a of daten.anzeigenListe()) {
-  console.log(`  Anzeige auf anderem Gerät${daten.anzeigenListe().length > 1 ? ` („${a.name}“)` : ''}: ${anzeigeLink(a)}`);
+// Link der ersten Anzeige („Board“) für die Startskripte (start.bat, start.sh öffnen ihn im Kiosk)
+const ANZEIGE_LINK_DATEI = path.join(DATEN, 'anzeige-link.txt');
+function anzeigeLinkMerken() {
+  const [erste] = daten.anzeigenListe();   // enthält den Schlüssel (anders als /api/anzeigen)
+  if (erste) writeFile(ANZEIGE_LINK_DATEI, anzeigeLink(erste)).catch(() => {});
 }
+
+await app.listen({ port: PORT, host: '0.0.0.0' });
+anzeigeLinkMerken();
+console.log('\n  Koordinaten-Board läuft');
+console.log(`  Companion (Handys):      ${lanAdresse()}   PIN ${PIN}`);
+const anzeigen = daten.anzeigenListe();
+for (const a of anzeigen) {
+  console.log(`  Anzeige${anzeigen.length > 1 ? ` „${a.name}“` : ''}: ${anzeigeLink(a)}`);
+  if (existsSync(DASHBOARD_DIST)) console.log(`  Widget-Dashboard${anzeigen.length > 1 ? ` „${a.name}“` : ''}: ${anzeigeLink(a).replace('/anzeige?', '/dashboard?')}`);
+}
+console.log(`  (Auch das Board-Gerät selbst braucht den Anzeige-Link; er steht in ${ANZEIGE_LINK_DATEI})`);
 if (netz.kandidaten.length > 1) {
   console.log('\n  Weitere Adressen dieses Geräts (falls die obere vom Handy nicht erreichbar ist):');
   for (const k of netz.kandidaten) if (k.adresse !== qrIp()) console.log(`    ${lanAdresse(k.adresse).padEnd(28)} ${k.name}`);

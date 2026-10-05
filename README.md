@@ -29,9 +29,9 @@ Zwei Projekte für eine gemeinsame Minecraft-Welt im Raum – seit dem 29.09.202
 ```bash
 # Alles zusammen: Board starten, dann am Handy den QR-Code der Anzeige scannen
 cd koordinaten-board && npm run installieren && npm run build && npm start   # Windows: start.bat, Linux: ./start.sh
-#   Companion: http://<ip>:3000/?pin=<PIN>   Anzeige: http://localhost:3000/anzeige
+#   Companion: http://<ip>:3000/?pin=<PIN>   Anzeige: Anzeige-Link aus der Konsole (auch am Board-Gerät, Umbau Phase 1)
 #   Anzeige auf einem anderen Gerät (TV, Tablet): Anzeige-Link aus der Konsole oder Companion → Board → Anzeigen
-#   Widget-Dashboard (in Arbeit): npm run dashboard:installieren && npm run dashboard:build, dann http://localhost:3000/dashboard
+#   Widget-Dashboard (in Arbeit): npm run dashboard:installieren && npm run dashboard:build, dann der Anzeige-Link mit /dashboard statt /anzeige
 
 # Companion ohne Board (DEMO-Mock mit Beispielwelt)
 open companion/companion-prototyp.html

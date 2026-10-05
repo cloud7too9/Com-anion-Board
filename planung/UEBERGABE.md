@@ -114,7 +114,7 @@ Board → Anzeigen → anordnen     ──▶  PUT /api/anzeigen/:id/layout, /vo
   2. Zuordnung in `WIDGETS` (Board `widgets.js`).
   3. Gegebenenfalls ein Anzeigeschema in `BOARD_KARTEN`.
 - **Rollen:**
-  - **Anzeige**: localhost ohne Link ist die erste Anzeige „Board“, andere Geräte brauchen den Anzeige-Link. Sie hat keine Bedienelemente.
+  - **Anzeige**: jedes Gerät braucht den Anzeige-Link, seit Umbau Phase 1 auch das Board-Gerät selbst (Konsole, `daten/anzeige-link.txt`). Sie hat keine Bedienelemente.
   - **Steuerung**: ein Handy mit Token. Es ändert Layouts und startet das Vollbild.
 - **Identität:** Das Token enthält Account und Gerät. Ein gesperrtes Gerät oder ein Token von vor B2 gilt nicht. Hinter `werBistDu()` kann später ein richtiges Login stehen, ohne die Daten anzufassen.
 - **Heute vs. E16:** „Aufs Board“ geht heute über `/ws` (`zeigen` → `gezeigt`) an die alte `/anzeige` und bleibt dort liegen. Mit der Sitzung (E16) wird daraus ein Widget im Dashboard (Kapitel 9).
@@ -131,7 +131,7 @@ npm start                                              # Windows: start.bat (bau
 ```
 
 - **Handy:** QR-Code der Anzeige scannen → „Beitreten“. Dort die Board-PIN eingeben, einen Account antippen oder einen neuen Namen tippen, dazu die eigene PIN.
-- **Anzeige:** `http://localhost:3000/dashboard` (Widgets) oder `/anzeige` (alt). Auf anderen Geräten mit dem Anzeige-Link (Konsole oder Board → Anzeigen).
+- **Anzeige:** nur mit dem Anzeige-Link aus der Konsole (oder Board → Anzeigen), auch auf dem Board-Gerät selbst: `…/dashboard?anzeige=…&schluessel=…` (Widgets) oder `…/anzeige?…` (alt).
 - **Anordnen:** am Handy Board → Anzeigen → „Anzeige anordnen“, am besten im Querformat.
 - **Ohne Board:** `cd companion/widgets && npm run dev`. Dann gibt es Beispielkarten, man bearbeitet lokal, die Galerie geht im Bearbeiten-Modus. `companion/companion-prototyp.html` direkt geöffnet läuft im DEMO-Mock.
 

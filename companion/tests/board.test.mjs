@@ -8,6 +8,7 @@ import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import QRCode from "qrcode";
+import { anzeigeLinkQuery } from "./hilfen.mjs";
 
 const HIER = fileURLToPath(new URL(".", import.meta.url));
 const DIR = path.join(HIER, "bilder");
@@ -49,10 +50,11 @@ async function boardStoppen() {
   b.kill("SIGTERM");
   await new Promise((r) => b.once("exit", r));
 }
-/** Teilnehmer aus Sicht der Anzeige (nur vom Board-Gerät selbst erlaubt) */
-function teilnehmerImRaum() {
+/** Teilnehmer aus Sicht der Anzeige (mit dem Anzeige-Link, auch auf dem Board-Gerät selbst) */
+async function teilnehmerImRaum() {
+  const q = await anzeigeLinkQuery(path.join(TMP, "daten"));
   return new Promise((ok, fehler) => {
-    const ws = new WebSocket(`ws://127.0.0.1:${BOARD_PORT}/ws?rolle=anzeige`);
+    const ws = new WebSocket(`ws://127.0.0.1:${BOARD_PORT}/ws${q}&rolle=anzeige`);
     ws.onmessage = (e) => { const n = JSON.parse(e.data); if (n.art === "teilnehmer") { ws.close(); ok(n.namen); } };
     ws.onerror = () => fehler(new Error("Anzeige-WS"));
   });
@@ -248,7 +250,7 @@ try {
     }
     await schlafen(300);
     const anzeige = await browser.newPage({ viewport: { width: 1600, height: 900 } });
-    await anzeige.goto(`${BOARD}/anzeige`);
+    await anzeige.goto(`${BOARD}/anzeige${await anzeigeLinkQuery(path.join(TMP, "daten"))}`);
     await anzeige.waitForSelector(".anzeige");
     pruefe(await anzeige.$(".a-gezeigt") === null, "Anzeige: noch keine Karte");
 
