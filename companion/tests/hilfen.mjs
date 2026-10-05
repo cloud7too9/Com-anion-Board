@@ -34,6 +34,16 @@ export async function threeUmleiten(ziel) {
     headers: { "access-control-allow-origin": "*" } }));
 }
 
+/** Anzeige-Link der ersten Anzeige („Board“) als Query „?anzeige=…&schluessel=…“. Seit Umbau Phase 1 braucht ihn
+ *  jedes Gerät, auch das Board-Gerät selbst (localhost). Der Server schreibt ihn nach <Datenordner>/anzeige-link.txt. */
+export async function anzeigeLinkQuery(datenOrdner) {
+  const datei = path.join(datenOrdner, "anzeige-link.txt");
+  for (let i = 0; i < 50; i++) {
+    try { return new URL((await readFile(datei, "utf8")).trim()).search; } catch { await new Promise((r) => setTimeout(r, 100)); }
+  }
+  throw new Error(`Anzeige-Link fehlt: ${datei}`);
+}
+
 /** Chromium mit Software-WebGL (SwiftShader), damit die 3D-Figur auch ohne GPU läuft */
 export const CHROMIUM_OPTIONEN = {
   ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}),

@@ -1,4 +1,4 @@
-# Übergabe · Umsetzung des Plans (Stand 04.10.2026)
+# Übergabe · Umsetzung des Plans (Stand 05.10.2026)
 
 > **Einstieg für den nächsten Chat:** zuerst [`../UEBERGABE.md`](../UEBERGABE.md) (Arbeitsweise, Konventionen), dann diese Datei, dann [`WARTELISTE.md`](WARTELISTE.md) (was auf Max wartet). Der Plan selbst steht in [`PLAN.md`](PLAN.md).
 >
@@ -15,15 +15,16 @@
   - aus Strang B die Phasen **B1** (Datenmodell) und **B2** (Accounts mit PIN)
   - **CI auf GitHub:** Bei jedem PR und jedem Push auf `main` laufen alle Tests (Kapitel 6)
   - **Nur Bedrock (E15):** Java gibt es nirgendwo mehr, auch nicht bei den Portalen
+- **Umbau Netlify + Pi (`UMBAUPLAN.md`), Phase 1 „Server absichern“ gebaut** (05.10.2026, Branch `claude/vibrant-mccarthy-qzhzq4`, noch nicht gemergt): Anzeige nur mit Anzeige-Link (auch am Board-Gerät, Link in `daten/anzeige-link.txt`), `HOST`, `CF-Connecting-IP`, CORS mit `ERLAUBTE_URSPRUENGE`, Board-PIN mit 6 Ziffern. **Für Max:** Nach dem Merge bekommt das Board eine neue 6-stellige PIN (QR-Code neu scannen), und der Kiosk öffnet die Anzeige über den Link aus `server/daten/anzeige-link.txt` (`start.bat`/`start.sh` angepasst).
 - **Als Nächstes** (Kapitel 9):
+  0. **Umbau Phase 2** „API-Adresse konfigurierbar“ (`UMBAUPLAN.md`)
   1. **Bauplan „Sitzung“** (E16) schreiben und mit Max abnicken
   2. **Offline B3–B5** mit HTTPS am Board (N5 ist entschieden: eigenes Zertifikat)
   3. A7 (Größenstufen je Widget): Planungsrunde mit Max
   4. Inhalte, die noch nicht beschrieben sind (Warteliste, Kapitel 4)
 - **Git:**
-  - **Alles ist in `main`.** Offene PRs: keine.
+  - **Repo-Umzug am 05.10.2026** nach `Com-anion-Board` (Kapitel 3). `main` = Start-Commit ohne Verlauf; Phase 1 des Umbaus liegt auf `claude/vibrant-mccarthy-qzhzq4` und wartet auf PR und Merge durch Max.
   - **Gemergt wird nur nach Rückfrage bei Max**, auch wenn Claude den Merge ausführt.
-  - 16 gemergte Branches warten aufs Löschen durch Max (Kapitel 3). In der Cloud-Sitzung darf Claude keine Branches löschen.
 - **Tests:** alle grün in `main`, lokal und in der CI (Kapitel 6).
 - **Für Max wichtig:** Seit B2 gelten alte Anmeldungen nicht mehr. Jedes Handy meldet sich einmal neu an, mit Name und eigener PIN.
 
@@ -78,13 +79,11 @@ Pfade unter `model/`, `lib/`, `components/` und `features/` liegen in `companion
 
 ## 3. Branches und Mergen
 
-- **Alles ist in `main`**, offene PRs gibt es nicht. Gearbeitet wurde zuletzt auf `claude/pr-status-review-yrg9m9`. Er ist mit #22 gemergt und kann für die nächste Runde neu von `main` abzweigen.
+- **Repo-Umzug (05.10.2026):** Gearbeitet wird seitdem in `cloud7too9/Com-anion-Board`. `main` dort ist der Stand von `flexibel-visionboard` (`main` 9d5be46, Merge von PR #26) als **ein Start-Commit ohne Verlauf**. Die 16 gemergten Branches und alle PR-Nummern bis #26 gibt es nur noch im alten Repo; löschen muss Max dort nichts mehr. Die PR-Nummern in dieser Datei meinen das alte Repo.
+- **Mitgenommen:** `bereich/karte-mcworld` als eigener Stand ohne Eltern (ältere Fassung der Biom-Phasen 2–4: Prüfseite `welt-pruefen.html`, `welt-import.test.mjs`). #7 und #19 haben den Inhalt ersetzt; der Branch ist zum Nachschlagen, ein Merge scheitert absichtlich an „unrelated histories“.
+- **Umbau:** je Phase ein Branch `umbau/<phase>` mit PR gegen `main` (`UMBAUPLAN.md`). Phase 1 läuft auf `claude/vibrant-mccarthy-qzhzq4` (Cloud-Sitzung, Branchname fest vorgegeben); Max kann ihn auf GitHub in `umbau/server-absichern` umbenennen.
 - **Mergen:** nur nach Rückfrage bei Max, immer mit **„Create a merge commit“**.
-- **Zum Löschen** (Max auf GitHub → Branches; Inhalt komplett in `main`):
-  `bereich/banner-screenshot`, `bereich/karte-welt-upload`, `bereich/mainhub-visionboard`, `bereich/ruestung`, `bereich/sammelobjekte`, `bereich/widgets-uebernahme`, `bereich/widgets-raster`, `bereich/widgets-groessen`, `bereich/widgets-struktur`, `bereich/widgets-register`, `bereich/widgets-themes`, `bereich/widgets-anzeigen`, `board/anzeige-link`, `board/identitaet`, `board/scanner`, `board/zusammenfuehrung`.
-  Bei `bereich/karte-welt-upload` fehlt in `main` nur der leere Merge-Commit von #8.
-- **Behalten:** `bereich/karte-mcworld`. Dort liegen die Phasen 2–4 des Biom-Plans in einer älteren Fassung (Prüfseite `welt-pruefen.html`, `welt-import.test.mjs` mit einer 55-MB-Welt). #7 hat sie ersetzt; Phase 1 kam mit #19.
-- **Empfehlung:** In den Repo-Einstellungen „Automatically delete head branches“ einschalten. Dann verschwindet ein Branch nach dem Merge, und ein PR kann nicht mehr in einen schon gemergten Branch gehen (so ging #8 verloren).
+- **Empfehlung:** In den Repo-Einstellungen „Automatically delete head branches“ einschalten. Dann verschwindet ein Branch nach dem Merge, und ein PR kann nicht mehr in einen schon gemergten Branch gehen (so ging im alten Repo #8 verloren).
 
 ### Verlauf bis 04.10.2026
 
@@ -116,7 +115,7 @@ Board → Anzeigen → anordnen     ──▶  PUT /api/anzeigen/:id/layout, /vo
   2. Zuordnung in `WIDGETS` (Board `widgets.js`).
   3. Gegebenenfalls ein Anzeigeschema in `BOARD_KARTEN`.
 - **Rollen:**
-  - **Anzeige**: localhost ohne Link ist die erste Anzeige „Board“, andere Geräte brauchen den Anzeige-Link. Sie hat keine Bedienelemente.
+  - **Anzeige**: jedes Gerät braucht den Anzeige-Link, seit Umbau Phase 1 auch das Board-Gerät selbst (Konsole, `daten/anzeige-link.txt`). Sie hat keine Bedienelemente.
   - **Steuerung**: ein Handy mit Token. Es ändert Layouts und startet das Vollbild.
 - **Identität:** Das Token enthält Account und Gerät. Ein gesperrtes Gerät oder ein Token von vor B2 gilt nicht. Hinter `werBistDu()` kann später ein richtiges Login stehen, ohne die Daten anzufassen.
 - **Heute vs. E16:** „Aufs Board“ geht heute über `/ws` (`zeigen` → `gezeigt`) an die alte `/anzeige` und bleibt dort liegen. Mit der Sitzung (E16) wird daraus ein Widget im Dashboard (Kapitel 9).
@@ -133,17 +132,17 @@ npm start                                              # Windows: start.bat (bau
 ```
 
 - **Handy:** QR-Code der Anzeige scannen → „Beitreten“. Dort die Board-PIN eingeben, einen Account antippen oder einen neuen Namen tippen, dazu die eigene PIN.
-- **Anzeige:** `http://localhost:3000/dashboard` (Widgets) oder `/anzeige` (alt). Auf anderen Geräten mit dem Anzeige-Link (Konsole oder Board → Anzeigen).
+- **Anzeige:** nur mit dem Anzeige-Link aus der Konsole (oder Board → Anzeigen), auch auf dem Board-Gerät selbst: `…/dashboard?anzeige=…&schluessel=…` (Widgets) oder `…/anzeige?…` (alt).
 - **Anordnen:** am Handy Board → Anzeigen → „Anzeige anordnen“, am besten im Querformat.
 - **Ohne Board:** `cd companion/widgets && npm run dev`. Dann gibt es Beispielkarten, man bearbeitet lokal, die Galerie geht im Bearbeiten-Modus. `companion/companion-prototyp.html` direkt geöffnet läuft im DEMO-Mock.
 
 ---
 
-## 6. Tests (alle grün in `main`, 04.10.2026)
+## 6. Tests (alle grün, 05.10.2026)
 
 | Teil | Befehl | Ergebnis |
 |---|---|---|
-| Board-Server | `cd koordinaten-board && npm test` | 57 Tests |
+| Board-Server | `cd koordinaten-board && npm test` | 60 Tests (seit Umbau Phase 1: CORS, Client-IP hinter dem Tunnel, Board-PIN) |
 | Widgets | `cd companion/widgets && npm run typecheck && npm test` | Typecheck ok, 108 Unit-Tests |
 | Companion und Dashboard (Playwright) | `cd companion/tests && npm test` | 14 Dateien, 492 Prüfungen und 20 Dekoder-Tests |
 
@@ -166,6 +165,7 @@ Voraussetzungen für die Playwright-Tests:
 - **Typecheck der Widgets:** Dafür `npm run typecheck` nehmen (`tsc -b`). `tsc -p .` prüft nichts, weil die oberste `tsconfig.json` nur Referenzen enthält. `npm run build` prüft ebenfalls.
 - **Die Playwright-Tests laufen gegen `dist`.** Nach Änderungen an den Widgets erst `npm run build`, sonst testet man den alten Stand.
 - **Tests auf dem langsameren Runner:** Nach dem Beitreten öffnet die Companion bei einem leeren Board „Noch keine Welt“ erst nach dem Laden der Welten. Ein Test, der Sheets schließt, muss vorher auf dieses Sheet warten (`.sheet-kopf h2` = „Welt“), sonst überdeckt es später den nächsten Klick. Nachstellen lässt sich so etwas mit einer Verzögerung per `page.route("**/api/orte/welten", …)`.
+- **Seit Umbau Phase 1:** Die Anzeige braucht auch auf dem Board-Gerät den Anzeige-Link (`daten/anzeige-link.txt`, Konsole). Tests, die ein Board starten, holen ihn mit `anzeigeLinkQuery()` aus `companion/tests/hilfen.mjs`. Liefert ein Test die Companion von einem anderen Ursprung aus als das Board, braucht das Board `ERLAUBTE_URSPRUENGE` mit diesem Ursprung (so in `board.test.mjs`, `anzeigeschema.test.mjs`). Die Test-PIN ist `471100`.
 - **Am Handy läuft die Companion über `http://192.168…`, also nicht in einem sicheren Kontext.**
   - `crypto.randomUUID` gibt es dort nicht. Deshalb erzeugt `neueEintragId()` die IDs aus `getRandomValues`.
   - Service Worker gehen dort gar nicht. Deshalb kommt mit B3 HTTPS (N5).
@@ -201,6 +201,7 @@ Voraussetzungen für die Playwright-Tests:
 
 ## 9. Nächste Schritte
 
+0. **Umbau auf Netlify + Raspberry Pi** nach `UMBAUPLAN.md`: Phase 1 „Server absichern“ läuft (dieser Branch), danach Phase 2 „API-Adresse konfigurierbar“. Die fünf offenen Entscheidungen im Umbauplan (Domain, Board-Gerät, Startseite, `/app/`-Inhalt, Node-Version am Pi) braucht es erst ab Phase 5.
 1. **Bauplan „Sitzung“ (E16)** als `planung/bauplaene/Bauplan-Sitzung.md`, dann Max fragen. Fest steht:
    - Die Sitzung lebt, solange das Board läuft. Ein Neustart beginnt leer; das gespeicherte Layout der Anzeige (A6) bleibt.
    - Inhalte lassen sich während der Laufzeit live ändern.

@@ -8,12 +8,13 @@ import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import QRCode from "qrcode";
+import { anzeigeLinkQuery } from "./hilfen.mjs";
 
 const HIER = fileURLToPath(new URL(".", import.meta.url));
 const DIR = path.join(HIER, "bilder");
 mkdirSync(DIR, { recursive: true });
 const TMP = mkdtempSync(path.join(tmpdir(), "board-test-"));
-const BOARD_PORT = 3198, SEITE_PORT = 3196, PIN = "4711";
+const BOARD_PORT = 3198, SEITE_PORT = 3196, PIN = "471100";
 const BOARD = `http://127.0.0.1:${BOARD_PORT}`;
 const QR_TEXT = `${BOARD}/?pin=${PIN}`;
 const JSQR = path.join(HIER, "node_modules/jsqr/dist/jsQR.js");
@@ -31,7 +32,8 @@ let board = null;
 async function boardStarten() {
   board = spawn(process.execPath, ["src/server.js"], {
     cwd: path.join(HIER, "../../koordinaten-board/server"),
-    env: { ...process.env, PORT: String(BOARD_PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten") },
+    env: { ...process.env, PORT: String(BOARD_PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten"),
+           ERLAUBTE_URSPRUENGE: `http://localhost:${SEITE_PORT}` },   // die Seite kommt von einem anderen Ursprung (CORS)
     stdio: "ignore",
   });
   for (let i = 0; i < 60; i++) {
@@ -49,10 +51,11 @@ async function boardStoppen() {
   b.kill("SIGTERM");
   await new Promise((r) => b.once("exit", r));
 }
-/** Teilnehmer aus Sicht der Anzeige (nur vom Board-Gerät selbst erlaubt) */
-function teilnehmerImRaum() {
+/** Teilnehmer aus Sicht der Anzeige (mit dem Anzeige-Link, auch auf dem Board-Gerät selbst) */
+async function teilnehmerImRaum() {
+  const q = await anzeigeLinkQuery(path.join(TMP, "daten"));
   return new Promise((ok, fehler) => {
-    const ws = new WebSocket(`ws://127.0.0.1:${BOARD_PORT}/ws?rolle=anzeige`);
+    const ws = new WebSocket(`ws://127.0.0.1:${BOARD_PORT}/ws${q}&rolle=anzeige`);
     ws.onmessage = (e) => { const n = JSON.parse(e.data); if (n.art === "teilnehmer") { ws.close(); ok(n.namen); } };
     ws.onerror = () => fehler(new Error("Anzeige-WS"));
   });
@@ -196,7 +199,7 @@ try {
     // Foto – Name leer → Felder füllen, aber noch nicht beitreten
     await p.fill("#boardName", "");
     await p.setInputFiles("#boardFoto", QR_PNG);
-    pruefe(await warteAuf(p, () => document.getElementById("boardPin")?.value === "4711"), "Foto: Adresse und PIN erkannt");
+    pruefe(await warteAuf(p, () => document.getElementById("boardPin")?.value === "471100"), "Foto: Adresse und PIN erkannt");
     pruefe(await p.$eval("#boardAdresse", (e) => e.value) === "127.0.0.1:3198", "Foto: Adresse eingetragen");
     pruefe((await knopfText(p)).includes("Nicht verbunden"), "Ohne Name noch nicht beigetreten");
     await p.click('[data-aktion="board-beitreten"]'); await p.waitForTimeout(200);
@@ -207,7 +210,7 @@ try {
     await p.click('[data-aktion="board-beitreten"]'); await p.waitForTimeout(200);
     pruefe((await text(p, "#boardBanner")).includes("Deine eigene PIN hat 4 bis 8 Ziffern"), "Ohne eigene PIN → Hinweis");
     await p.fill("#boardKontoPin", "1357");
-    await p.fill("#boardPin", "1111");
+    await p.fill("#boardPin", "111111");   // falsche Board-PIN mit 6 Ziffern, sonst meckert die Seite selbst
     await p.click('[data-aktion="board-beitreten"]');
     pruefe(await warteAuf(p, () => document.getElementById("boardBanner")?.textContent.includes("Falsche PIN")), "Falsche PIN → Fehlermeldung vom Board");
 
@@ -248,7 +251,7 @@ try {
     }
     await schlafen(300);
     const anzeige = await browser.newPage({ viewport: { width: 1600, height: 900 } });
-    await anzeige.goto(`${BOARD}/anzeige`);
+    await anzeige.goto(`${BOARD}/anzeige${await anzeigeLinkQuery(path.join(TMP, "daten"))}`);
     await anzeige.waitForSelector(".anzeige");
     pruefe(await anzeige.$(".a-gezeigt") === null, "Anzeige: noch keine Karte");
 

@@ -13,6 +13,8 @@ const scryptAsync = promisify(scrypt);
 const FARBEN = ['#00e5ff', '#7cff6b', '#ffd23f', '#b98cff', '#ff9f43', '#4dabff'];
 /** Eigene PIN eines Accounts: 4 bis 8 Ziffern */
 export const KONTO_PIN = /^\d{4,8}$/;
+/** Board-PIN (im QR-Code): mindestens 6 Ziffern, seit sie aus dem Internet erreichbar sein kann (Umbau Phase 1) */
+export const BOARD_PIN = /^\d{6,}$/;
 
 export class AnmeldeFehler extends Error {
   constructor(status, message) {

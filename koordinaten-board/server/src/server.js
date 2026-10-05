@@ -10,7 +10,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Daten, DatenFehler } from './daten.js';
-import { identitaet, AnmeldeFehler } from './identitaet.js';
+import { identitaet, AnmeldeFehler, BOARD_PIN } from './identitaet.js';
 import { companionApi } from './companion-api.js';
 import { anzeigeSicht } from './sicht.js';
 import { COMPANION_ORDNER } from './regeln.js';
@@ -21,15 +21,17 @@ import { erkennungBeenden } from './erkennung.js';
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
+// Lausch-Adresse: 0.0.0.0 fürs Heimnetz (Handys im WLAN). Auf dem Pi hinter cloudflared HOST=127.0.0.1,
+// dann erreicht den Server nur noch der Tunnel (Umbau Phase 6).
+const HOST = process.env.HOST ?? '0.0.0.0';
 const DATEN = path.resolve(process.env.DATEN_ORDNER ?? path.join(HIER, '..', 'daten'));
 const CLIENT_DIST = path.resolve(HIER, '..', '..', 'client', 'dist');
 // Widget-Dashboard (companion/widgets, `npm run build` → dist/), ausgeliefert unter /dashboard
 const DASHBOARD_DIST = path.join(COMPANION_ORDNER, 'widgets', 'dist');
 // Seite der Companion, die unter / ausgeliefert wird (später z. B. modul-a-live-karte.html)
 const COMPANION_DATEI = process.env.COMPANION_DATEI ?? 'companion-prototyp.html';
-// Anzeige darf vom Gerät selbst (localhost) oder mit Anzeige-Link (Anzeige + Schlüssel) geöffnet werden.
-// Notschalter für alles im Netz ohne Schutz: ANZEIGE_OFFEN=1
-const ANZEIGE_OFFEN = process.env.ANZEIGE_OFFEN === '1';
+// Anzeige nur mit Anzeige-Link (Anzeige + Schlüssel), auch auf dem Board-Gerät selbst (Umbau Phase 1):
+// hinter einem Tunnel käme sonst jede Anfrage aus dem Internet als „localhost“ herein.
 
 // ---------- PIN + Sitzungs-Signatur (bleiben über Neustarts erhalten) ----------
 
@@ -45,15 +47,35 @@ async function dauerwertLaden(datei, erzeugen) {
 }
 
 await mkdir(DATEN, { recursive: true });
-const PIN = process.env.RAUM_PIN ?? (await dauerwertLaden('pin.txt', () => String(randomInt(1000, 10000))));
+// Board-PIN: mindestens 6 Ziffern (BOARD_PIN). Eine alte 4-stellige pin.txt wird ersetzt, eine zu kurze RAUM_PIN abgelehnt.
+if (process.env.RAUM_PIN !== undefined && !BOARD_PIN.test(process.env.RAUM_PIN)) {
+  console.error(`RAUM_PIN „${process.env.RAUM_PIN}“ geht nicht: Die Board-PIN hat mindestens 6 Ziffern.`);
+  process.exit(1);
+}
+const neuePin = () => String(randomInt(100000, 1000000));
+let PIN = process.env.RAUM_PIN ?? (await dauerwertLaden('pin.txt', neuePin));
+if (!BOARD_PIN.test(PIN)) {
+  PIN = neuePin();
+  await writeFile(path.join(DATEN, 'pin.txt'), PIN);
+  console.log(`  Die alte PIN in pin.txt war zu kurz – neue PIN mit 6 Ziffern: ${PIN}`);
+}
 const GEHEIM = await dauerwertLaden('geheim.txt', () => randomBytes(32).toString('hex'));
 
+/** Kommt die Verbindung vom Gerät selbst (loopback)? Gibt keine Rechte mehr; dort sitzt hinter dem Tunnel cloudflared. */
 const istLokal = (req) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
-/** Darf diese Anfrage Anzeige sein? localhost, Notschalter oder gültiger Anzeige-Link (?anzeige=…&schluessel=…) */
+/** Adresse des Geräts für PIN-Sperre und Anmeldung. Hinter cloudflared (Umbau Phase 6) kommt jede Anfrage von
+ *  127.0.0.1 und trägt die echte Adresse im Header CF-Connecting-IP. Der Header zählt nur von loopback, sonst
+ *  könnte ein Handy im WLAN die Sperre mit einem erfundenen Header umgehen. */
+function clientIp(req) {
+  const kopf = req.headers['cf-connecting-ip'];
+  if (istLokal(req) && typeof kopf === 'string' && kopf.trim()) return kopf.trim();
+  return req.socket.remoteAddress;
+}
+/** Darf diese Anfrage Anzeige sein? Nur mit gültigem Anzeige-Link (?anzeige=…&schluessel=…) */
 const anzeigeZugang = (req) => {
   const { anzeige, schluessel } = req.query ?? {};
   const mitLink = anzeige ? daten.anzeigeMitSchluessel(String(anzeige), String(schluessel ?? '')) : null;
-  return { erlaubt: Boolean(mitLink) || istLokal(req) || ANZEIGE_OFFEN, anzeige: mitLink };
+  return { erlaubt: Boolean(mitLink), anzeige: mitLink };
 };
 
 // Netzwerkadresse für QR-Code und Konsole – regelmäßig neu bestimmen (WLAN-Wechsel)
@@ -76,12 +98,12 @@ function lanAdresse(ip = qrIp()) {
   return `http://${ip}:${PORT}`;
 }
 
-/** Anzeige-Link für ein anderes Gerät im Netz – dieselbe Adresse wie im QR-Code der Handys */
+/** Anzeige-Link – dieselbe Adresse wie im QR-Code der Handys; ohne ihn ist kein Gerät Anzeige, auch das Board-Gerät nicht */
 const anzeigeLink = (a) => `${lanAdresse()}/anzeige?anzeige=${encodeURIComponent(a.id)}&schluessel=${encodeURIComponent(a.schluessel)}`;
 
 /** Merkt sich die IP, die ein anderes Gerät in der Adresszeile benutzt hat. */
 function adresseLernen(req) {
-  if (istLokal(req)) return;
+  if (istLokal(req)) return;   // auch hinter dem Tunnel: dort nennt OEFFENTLICHE_URL die Adresse
   const host = (req.headers.host ?? '').replace(/:\d+$/, '');
   if (!host || host === bewaehrt || !netz.kandidaten.some((k) => k.adresse === host)) return;
   bewaehrt = host;
@@ -102,27 +124,39 @@ const ident = identitaet({ daten, geheim: GEHEIM, boardPin: PIN });
 const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? 'warn' } });
 app.addHook('onRequest', async (req) => adresseLernen(req));
 
-// Die Companion-PWA läuft auf einem anderen Ursprung und tritt von dort bei.
-// Freigegeben sind nur die Pfade, die sie braucht – /api/anzeige (PIN!) bleibt zu.
-// Anmeldung per Bearer-Token, nicht per Cookie, deshalb reicht „*“.
-const FUER_COMPANION = ['/api/beitreten', '/api/beitreten/konten', '/api/ich'];
+// ---------- CORS (Umbau Phase 1): Seiten und API kommen künftig von verschiedenen Ursprüngen ----------
+// (Netlify ↔ api.<domain>). Für /api und /ws gelten nur Ursprünge aus ERLAUBTE_URSPRUENGE (kommagetrennt;
+// Standard: die Vite-Dev-Server von Anzeige und Dashboard) und der eigene Ursprung, solange der Server die
+// Seiten selbst ausliefert (Browser schicken Origin auch bei same-origin POST/PUT/DELETE). Anfragen ohne
+// Origin (curl, Node, Kamera-App) sind kein Browser-Ursprung und bleiben wie bisher.
+const ERLAUBTE_URSPRUENGE = new Set((process.env.ERLAUBTE_URSPRUENGE ?? 'http://localhost:5173,http://127.0.0.1:5173')
+  .split(',').map((u) => u.trim().replace(/\/$/, '')).filter(Boolean));
+function ursprungErlaubt(req) {
+  const origin = req.headers.origin;
+  if (ERLAUBTE_URSPRUENGE.has(origin)) return true;
+  try { return new URL(origin).host === req.headers.host; } catch { return false; }
+}
+const CORS_METHODEN = 'GET, POST, PUT, DELETE, OPTIONS';
 app.addHook('onRequest', async (req, reply) => {
-  if (!FUER_COMPANION.includes(req.url.split('?')[0])) return;
-  reply.header('Access-Control-Allow-Origin', '*');
+  const pfad = req.url.split('?')[0];
+  if (!(pfad === '/api' || pfad.startsWith('/api/') || pfad === '/ws')) return;
+  const origin = req.headers.origin;
+  if (!origin) return;
+  if (!ursprungErlaubt(req)) return reply.code(403).send({ fehler: 'Ursprung nicht erlaubt' });
+  reply.header('Access-Control-Allow-Origin', origin).header('Vary', 'Origin');
   // Chrome fragt vor Anfragen ins Heimnetz zusätzlich nach (Private Network Access)
   if (req.headers['access-control-request-private-network'] === 'true') {
     reply.header('Access-Control-Allow-Private-Network', 'true');
   }
 });
-for (const pfad of FUER_COMPANION) {
-  app.options(pfad, async (req, reply) =>
-    reply
-      .header('Access-Control-Allow-Methods', 'GET, POST')
-      .header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
-      .header('Access-Control-Max-Age', '600')
-      .code(204)
-      .send());
-}
+// Preflight für alle API-Pfade (auch PUT und DELETE); die Ursprungsprüfung macht der Hook oben
+app.options('/api/*', async (req, reply) =>
+  reply
+    .header('Access-Control-Allow-Methods', CORS_METHODEN)
+    .header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+    .header('Access-Control-Max-Age', '600')
+    .code(204)
+    .send());
 await app.register(fastifyMultipart, { limits: { fileSize: 25 * 1024 * 1024, files: 1 } });
 await app.register(fastifyWebsocket);
 // Leerer Rumpf bei „Content-Type: application/json“ (z. B. DELETE) ist kein Fehler
@@ -145,7 +179,7 @@ function anmeldeFehler(reply, f) {
 // Beitreten (B2): Board-PIN aus dem QR-Code, dann Account wählen oder anlegen – Name + eigene PIN
 app.post('/api/beitreten/konten', async (req, reply) => {
   try {
-    return { konten: ident.konten(req.body?.pin, req.socket.remoteAddress) };
+    return { konten: ident.konten(req.body?.pin, clientIp(req)) };
   } catch (f) {
     return anmeldeFehler(reply, f);
   }
@@ -154,7 +188,7 @@ app.post('/api/beitreten/konten', async (req, reply) => {
 app.post('/api/beitreten', async (req, reply) => {
   const { pin, name, kontoPin } = req.body ?? {};
   try {
-    return await ident.anmelden({ pin, name, kontoPin, ip: req.socket.remoteAddress });
+    return await ident.anmelden({ pin, name, kontoPin, ip: clientIp(req) });
   } catch (f) {
     return anmeldeFehler(reply, f);
   }
@@ -168,7 +202,7 @@ app.get('/api/ich', async (req, reply) => {
 
 app.get('/api/anzeige', async (req, reply) => {
   const zugang = anzeigeZugang(req);
-  if (!zugang.erlaubt) return reply.code(403).send({ fehler: 'Anzeige nur mit Anzeige-Link oder auf dem Board-Gerät' });
+  if (!zugang.erlaubt) return reply.code(403).send({ fehler: 'Anzeige nur mit Anzeige-Link' });
   return {
     anzeige: zugang.anzeige && { id: zugang.anzeige.id, name: zugang.anzeige.name },
     beitrittsUrl: `${lanAdresse()}/?pin=${PIN}`,
@@ -180,14 +214,14 @@ app.get('/api/anzeige', async (req, reply) => {
 });
 
 // Widget-Dashboard (A6): Die Anzeige liest ihr Layout und meldet ihre Reihen. Welche Anzeige sie ist,
-// sagt der Anzeige-Link; das Board-Gerät selbst (localhost) ohne Link ist die erste Anzeige („Board“).
+// sagt der Anzeige-Link.
 function anzeigeVonAnfrage(req, reply) {
   const zugang = anzeigeZugang(req);
   if (!zugang.erlaubt) {
-    reply.code(403).send({ fehler: 'Anzeige nur mit Anzeige-Link oder auf dem Board-Gerät' });
+    reply.code(403).send({ fehler: 'Anzeige nur mit Anzeige-Link' });
     return null;
   }
-  return zugang.anzeige ?? daten.anzeigeLokal();
+  return zugang.anzeige;
 }
 app.get('/api/anzeige/layout', async (req, reply) => {
   const a = anzeigeVonAnfrage(req, reply);
@@ -212,13 +246,16 @@ await app.register(companionApi, {
   geaendert: (bereich, weltId = null) => {
     anAlle({ art: 'geaendert', bereich, weltId });
     if (['welten', 'orte', 'einstellungen'].includes(bereich)) anAlle({ art: 'zustand', zustand: anzeigeSicht(daten) });
-    if (bereich === 'anzeigen') veralteteAnzeigenTrennen();
+    if (bereich === 'anzeigen') {
+      veralteteAnzeigenTrennen();
+      anzeigeLinkMerken();
+    }
   },
   anzeigeLink,
 });
 
 // Widgets des Dashboards: fertige Karte je Widget-Typ (und Quelle) aus den Daten der aktiven Welt.
-// Lesen darf die Anzeige (localhost oder Anzeige-Link) und jedes angemeldete Handy.
+// Lesen darf die Anzeige (mit Anzeige-Link) und jedes angemeldete Handy.
 await app.register(async (widgets) => {
   widgets.addHook('onRequest', async (req, reply) => {
     if (!anzeigeZugang(req).erlaubt && !ident.werBistDu(req)) {
@@ -288,10 +325,9 @@ app.get('/ws', { websocket: true }, (socket, req) => {
   let verbindung;
   if (rolle === 'anzeige') {
     const zugang = anzeigeZugang(req);
-    if (!zugang.erlaubt) return socket.close(4003, 'Anzeige nur mit Anzeige-Link oder auf dem Board-Gerät');
-    // Nur wer allein über den Link hereinkam, fliegt raus, wenn der Schlüssel neu erzeugt wird
-    const nurLink = zugang.anzeige && !istLokal(req) && !ANZEIGE_OFFEN;
-    verbindung = { socket, rolle: 'anzeige', nutzer: null, zugang: nurLink ? { id: zugang.anzeige.id, schluessel: zugang.anzeige.schluessel } : null };
+    if (!zugang.erlaubt) return socket.close(4003, 'Anzeige nur mit Anzeige-Link');
+    // Wird der Schlüssel neu erzeugt, fliegt die Anzeige mit dem alten raus (veralteteAnzeigenTrennen)
+    verbindung = { socket, rolle: 'anzeige', nutzer: null, zugang: { id: zugang.anzeige.id, schluessel: zugang.anzeige.schluessel } };
   } else {
     const nutzer = ident.ausToken(token);
     if (!nutzer) return socket.close(4001, 'Nicht angemeldet');
@@ -382,14 +418,23 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   });
 }
 
-await app.listen({ port: PORT, host: '0.0.0.0' });
-console.log('\n  Koordinaten-Board läuft');
-console.log(`  Anzeige (dieses Gerät):  http://localhost:${PORT}/anzeige`);
-if (existsSync(DASHBOARD_DIST)) console.log(`  Widget-Dashboard:        http://localhost:${PORT}/dashboard`);
-console.log(`  Companion (Handys):      ${lanAdresse()}   PIN ${PIN}`);
-for (const a of daten.anzeigenListe()) {
-  console.log(`  Anzeige auf anderem Gerät${daten.anzeigenListe().length > 1 ? ` („${a.name}“)` : ''}: ${anzeigeLink(a)}`);
+// Link der ersten Anzeige („Board“) für die Startskripte (start.bat, start.sh öffnen ihn im Kiosk)
+const ANZEIGE_LINK_DATEI = path.join(DATEN, 'anzeige-link.txt');
+function anzeigeLinkMerken() {
+  const [erste] = daten.anzeigenListe();   // enthält den Schlüssel (anders als /api/anzeigen)
+  if (erste) writeFile(ANZEIGE_LINK_DATEI, anzeigeLink(erste)).catch(() => {});
 }
+
+await app.listen({ port: PORT, host: HOST });
+anzeigeLinkMerken();
+console.log(`\n  Koordinaten-Board läuft (lauscht auf ${HOST}:${PORT})`);
+console.log(`  Companion (Handys):      ${lanAdresse()}   PIN ${PIN}`);
+const anzeigen = daten.anzeigenListe();
+for (const a of anzeigen) {
+  console.log(`  Anzeige${anzeigen.length > 1 ? ` „${a.name}“` : ''}: ${anzeigeLink(a)}`);
+  if (existsSync(DASHBOARD_DIST)) console.log(`  Widget-Dashboard${anzeigen.length > 1 ? ` „${a.name}“` : ''}: ${anzeigeLink(a).replace('/anzeige?', '/dashboard?')}`);
+}
+console.log(`  (Auch das Board-Gerät selbst braucht den Anzeige-Link; er steht in ${ANZEIGE_LINK_DATEI})`);
 if (netz.kandidaten.length > 1) {
   console.log('\n  Weitere Adressen dieses Geräts (falls die obere vom Handy nicht erreichbar ist):');
   for (const k of netz.kandidaten) if (k.adresse !== qrIp()) console.log(`    ${lanAdresse(k.adresse).padEnd(28)} ${k.name}`);

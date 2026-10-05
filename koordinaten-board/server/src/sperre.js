@@ -1,6 +1,7 @@
-// Sperre nach falschen PINs: Die PIN hat nur 4 Stellen. Seit die Companion von
-// einem anderen Ursprung aus beitreten darf (CORS), könnte sonst jede Webseite,
-// die ein Handy im WLAN offen hat, alle 10 000 PINs durchprobieren.
+// Sperre nach falschen PINs je Adresse des Geräts. Seit die Companion von einem anderen
+// Ursprung aus beitreten darf (CORS), könnte sonst jede Webseite, die ein Handy offen hat,
+// PINs durchprobieren. Hinter dem Tunnel ist die Adresse die aus CF-Connecting-IP
+// (clientIp in server.js), sonst lägen alle Geräte auf 127.0.0.1 in einer Sperre.
 
 /**
  * @param {{ max?: number, dauerMs?: number, jetzt?: () => number }} [optionen]

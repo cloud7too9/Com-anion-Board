@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, rmSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { companionAusliefern, threeUmleiten, CHROMIUM_OPTIONEN } from "./hilfen.mjs";
+import { companionAusliefern, threeUmleiten, CHROMIUM_OPTIONEN, anzeigeLinkQuery } from "./hilfen.mjs";
 
 const HIER = fileURLToPath(new URL(".", import.meta.url));
 const DIR = path.join(HIER, "bilder");
@@ -16,7 +16,7 @@ mkdirSync(DIR, { recursive: true });
 const BOARD_ORDNER = path.join(HIER, "../../koordinaten-board");
 const { kartePruefen } = await import(pathToFileURL(path.join(BOARD_ORDNER, "server/src/zeigen.js")).href);
 const TMP = mkdtempSync(path.join(tmpdir(), "schema-test-"));
-const PORT = 3194, PIN = "4711", BOARD = `http://127.0.0.1:${PORT}`;
+const PORT = 3194, PIN = "471100", BOARD = `http://127.0.0.1:${PORT}`;
 if (!existsSync(path.join(BOARD_ORDNER, "client/dist/index.html"))) {
   console.log("FEHL Board-Client nicht gebaut: npm --prefix ../../koordinaten-board run build");
   process.exit(1);
@@ -26,7 +26,7 @@ const schlafen = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const board = spawn(process.execPath, ["src/server.js"], {
   cwd: path.join(BOARD_ORDNER, "server"),
-  env: { ...process.env, PORT: String(PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten") },
+  env: { ...process.env, PORT: String(PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten"), ERLAUBTE_URSPRUENGE: "http://127.0.0.1:3193" },
   stdio: "ignore",
 });
 const companion = await companionAusliefern(3193);
@@ -78,7 +78,7 @@ try {
 
   // ---- Knöpfe „Aufs Board“ in allen Details, echte Anzeige je Schema -----------------
   const anzeige = await browser.newPage({ viewport: { width: 1600, height: 900 } });
-  await anzeige.goto(`${BOARD}/anzeige`);
+  await anzeige.goto(`${BOARD}/anzeige${await anzeigeLinkQuery(path.join(TMP, "daten"))}`);
   await anzeige.waitForSelector(".anzeige");
   const zeigen = async (oeffnen, name) => {
     await p.evaluate(oeffnen); await p.waitForTimeout(350);

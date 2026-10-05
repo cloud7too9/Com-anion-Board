@@ -1,5 +1,7 @@
 # Minecraft Companion & Koordinaten-Board
 
+> **Seit dem 05.10.2026 in diesem Repo `Com-anion-Board`.** Der Umbau auf Netlify + Raspberry Pi ([`planung/UMBAUPLAN.md`](planung/UMBAUPLAN.md)) hat hier ohne den alten Verlauf begonnen; die Historie bis zum Umzug liegt in [`cloud7too9/flexibel-visionboard`](https://github.com/cloud7too9/flexibel-visionboard).
+
 Zwei Projekte für eine gemeinsame Minecraft-Welt im Raum – seit dem 29.09.2026 **ein System**: Das Koordinaten-Board ist der Server der Companion und zeigt die Orte groß im Zimmer an. Jedes Projekt behält seine Technik, Tests und Doku.
 
 | Ordner | Projekt | Stand |
@@ -7,7 +9,7 @@ Zwei Projekte für eine gemeinsame Minecraft-Welt im Raum – seit dem 29.09.202
 | [`companion/`](companion/) | **Companion**: die App am Handy – Karte, Sammelobjekte, Portal-Verwaltung, Banner, Rüstung (eine HTML-Seite + `regeln.js`, Vanilla JS) | aktuelle Arbeit |
 | [`companion/widgets/`](companion/widgets/) | **Widgets**: Widget-Dashboard fürs Board unter `/dashboard` (Vite + React + TypeScript, aus MainHub): 13 Widget-Typen, Karten vom Board, Bereichs-Themes, Layout je Anzeige | A0–A6 gebaut, A7 offen |
 | [`koordinaten-board/`](koordinaten-board/) | **Koordinaten-Board**: Server der Companion (Daten, OCR, Live-Sync) und Anzeige im Zimmer (Fastify + React) | zusammengeführt |
-| [`planung/`](planung/) | **Planung**: Gesamtplan Widget-Dashboard, Offline-Sync, Welt-Import ([`PLAN.md`](planung/PLAN.md)) plus Ideen und Baupläne der Planungskommission | 04.10.2026 |
+| [`planung/`](planung/) | **Planung**: Umbauplan Netlify + Pi ([`UMBAUPLAN.md`](planung/UMBAUPLAN.md)), Gesamtplan Widget-Dashboard, Offline-Sync, Welt-Import ([`PLAN.md`](planung/PLAN.md)) plus Ideen und Baupläne der Planungskommission | Umbau Phase 1 |
 | [`referenz/`](referenz/) | **Gemeinsame Referenz**: Datenmodell, Seed-Map-Screenshots, Dashboard-Vorbild | – |
 
 **Neuer Chat / Weitermachen:** zuerst [`UEBERGABE.md`](UEBERGABE.md) lesen (Arbeitsweise, Zusammenspiel, offene Entscheidungen), danach die Übergabe des Projekts, um das es geht. Stand der Umsetzung des Plans: [`planung/UEBERGABE.md`](planung/UEBERGABE.md). Was auf Max wartet, steht in [`planung/WARTELISTE.md`](planung/WARTELISTE.md).
@@ -27,9 +29,9 @@ Zwei Projekte für eine gemeinsame Minecraft-Welt im Raum – seit dem 29.09.202
 ```bash
 # Alles zusammen: Board starten, dann am Handy den QR-Code der Anzeige scannen
 cd koordinaten-board && npm run installieren && npm run build && npm start   # Windows: start.bat, Linux: ./start.sh
-#   Companion: http://<ip>:3000/?pin=<PIN>   Anzeige: http://localhost:3000/anzeige
+#   Companion: http://<ip>:3000/?pin=<PIN>   Anzeige: Anzeige-Link aus der Konsole (auch am Board-Gerät, Umbau Phase 1)
 #   Anzeige auf einem anderen Gerät (TV, Tablet): Anzeige-Link aus der Konsole oder Companion → Board → Anzeigen
-#   Widget-Dashboard (in Arbeit): npm run dashboard:installieren && npm run dashboard:build, dann http://localhost:3000/dashboard
+#   Widget-Dashboard (in Arbeit): npm run dashboard:installieren && npm run dashboard:build, dann der Anzeige-Link mit /dashboard statt /anzeige
 
 # Companion ohne Board (DEMO-Mock mit Beispielwelt)
 open companion/companion-prototyp.html

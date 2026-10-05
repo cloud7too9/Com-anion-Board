@@ -2,10 +2,11 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir, networkInterfaces } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { WebSocket as WsClient } from 'ws';   // kann Origin setzen (Abhängigkeit von @fastify/websocket)
 
 const PORT = 3297;
 const BASIS = `http://127.0.0.1:${PORT}`;
@@ -15,7 +16,7 @@ let server;
 async function starten() {
   server = spawn(process.execPath, ['src/server.js'], {
     cwd: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
-    env: { ...process.env, PORT: String(PORT), DATEN_ORDNER: ORDNER, RAUM_PIN: '4711' },
+    env: { ...process.env, PORT: String(PORT), DATEN_ORDNER: ORDNER, RAUM_PIN: '471100', ERLAUBTE_URSPRUENGE: 'https://board.beispiel.de, http://localhost:5173' },
     stdio: 'ignore',
   });
   for (let i = 0; i < 50; i += 1) {
@@ -38,7 +39,7 @@ const anfrage = async (methode, pfad, token, body) => {
   return { status: res.status, daten: await res.json() };
 };
 // Account anlegen oder – wenn es den Namen gibt – mit derselben PIN anmelden (B2)
-const beitreten = async (name) => (await anfrage('POST', '/api/beitreten', null, { pin: '4711', name, kontoPin: '2468' })).daten.token;
+const beitreten = async (name) => (await anfrage('POST', '/api/beitreten', null, { pin: '471100', name, kontoPin: '2468' })).daten.token;
 
 test('ohne Anmeldung kein Zugriff', async () => {
   assert.deepEqual((await anfrage('GET', '/api/server')).daten, { name: 'koordinaten-board' });
@@ -50,16 +51,16 @@ test('ohne Anmeldung kein Zugriff', async () => {
 test('Accounts mit PIN: Konten nur mit Board-PIN, anlegen, anmelden, Ersteller an Einträgen', async () => {
   let r = await anfrage('POST', '/api/beitreten/konten', null, { pin: '0000' });
   assert.equal(r.status, 401);
-  r = await anfrage('POST', '/api/beitreten', null, { pin: '4711', name: 'Tim', kontoPin: '9753' });
+  r = await anfrage('POST', '/api/beitreten', null, { pin: '471100', name: 'Tim', kontoPin: '9753' });
   assert.deepEqual([r.status, r.daten.neu, r.daten.name], [200, true, 'Tim']);
   const tim = r.daten;
-  assert.ok((await anfrage('POST', '/api/beitreten/konten', null, { pin: '4711' })).daten.konten.some((k) => k.id === tim.id && k.name === 'Tim'));
+  assert.ok((await anfrage('POST', '/api/beitreten/konten', null, { pin: '471100' })).daten.konten.some((k) => k.id === tim.id && k.name === 'Tim'));
   const ich = (await anfrage('GET', '/api/ich', tim.token)).daten;
   assert.deepEqual([ich.id, ich.name], [tim.id, 'Tim']);
-  r = await anfrage('POST', '/api/beitreten', null, { pin: '4711', name: 'tim', kontoPin: '1111' });
+  r = await anfrage('POST', '/api/beitreten', null, { pin: '471100', name: 'tim', kontoPin: '1111' });
   assert.deepEqual([r.status, r.daten.fehler], [401, 'Falsche PIN für Tim']);
-  assert.equal((await anfrage('POST', '/api/beitreten', null, { pin: '4711', name: 'Tim', kontoPin: '9753' })).daten.neu, false);
-  assert.equal((await anfrage('POST', '/api/beitreten', null, { pin: '4711', name: 'Tim' })).status, 400, 'ohne eigene PIN');
+  assert.equal((await anfrage('POST', '/api/beitreten', null, { pin: '471100', name: 'Tim', kontoPin: '9753' })).daten.neu, false);
+  assert.equal((await anfrage('POST', '/api/beitreten', null, { pin: '471100', name: 'Tim' })).status, 400, 'ohne eigene PIN');
   // Einträge tragen die Benutzer-ID, der Name bleibt zur Anzeige
   const b = (await anfrage('POST', '/api/banner', tim.token, { name: 'Tims Banner', basis: 'white', ebenen: [] })).daten.banner;
   assert.deepEqual([b.von, b.erstellerId], ['Tim', tim.id]);
@@ -143,7 +144,7 @@ test('Welt-Import: Worker, Dekoder und Bibliothek werden als JavaScript ausgelie
   }
 });
 
-// „Von außen“: über eine Netzwerkadresse dieses Rechners statt localhost – dann gilt die Anfrage nicht als lokal
+// „Von außen“: über eine Netzwerkadresse dieses Rechners statt localhost (seit Umbau Phase 1 gelten für beide dieselben Regeln)
 const AUSSEN = Object.values(networkInterfaces()).flat().find((n) => n && n.family === 'IPv4' && !n.internal)?.address;
 
 test('Anzeige-Link: von außen nur mit gültigem Schlüssel, neuer Schlüssel macht den alten ungültig', { skip: !AUSSEN && 'keine Netzwerkadresse' }, async () => {
@@ -157,8 +158,8 @@ test('Anzeige-Link: von außen nur mit gültigem Schlüssel, neuer Schlüssel ma
   assert.equal(link.pathname, '/anzeige');
   const aussen = (pfad, query = '') => fetch(`http://${AUSSEN}:${PORT}${pfad}${query}`);
 
-  // localhost darf immer, von außen nur mit Link
-  assert.equal((await fetch(`${BASIS}/api/anzeige`)).status, 200);
+  // Ohne Link gesperrt, auch auf dem Board-Gerät selbst (localhost); mit Link erlaubt
+  assert.equal((await fetch(`${BASIS}/api/anzeige`)).status, 403, 'localhost ohne Link');
   assert.equal((await aussen('/api/anzeige')).status, 403);
   const mitLink = await aussen('/api/anzeige', link.search);
   assert.equal(mitLink.status, 200);
@@ -199,8 +200,10 @@ test('Widgets: Karte je Widget-Typ aus der aktiven Welt, Quellen, leerer Zustand
   await anfrage('PUT', `/api/sammelobjekte/welten/${welt.id}/rib`, max, { gefunden: true });
   await anfrage('POST', `/api/portale/welten/${welt.id}`, max, { name: 'Basis', oberwelt: { x: 800, y: 64, z: 80 }, nether: { x: 100, y: 64, z: 10 } });
   const banner = (await anfrage('POST', '/api/banner', max, { name: 'Kreuz', basis: 'white', ebenen: [{ muster: 'cross', farbe: 'red' }] })).daten.banner;
-  // localhost ist die Anzeige des Board-Geräts – ohne Token
-  const widget = async (typ, quelle) => anfrage('GET', `/api/widgets/${typ}${quelle ? `?quelle=${quelle}` : ''}`);
+  // Die Anzeige liest mit ihrem Anzeige-Link (ohne Token); ohne Link und ohne Token ist auch localhost gesperrt
+  const link = new URL((await anfrage('GET', '/api/anzeigen', max)).daten.anzeigen[0].link).search;
+  assert.equal((await anfrage('GET', '/api/widgets/sammelobjekte.status')).status, 403, 'localhost ohne Link und Token');
+  const widget = async (typ, quelle) => anfrage('GET', `/api/widgets/${typ}${link}${quelle ? `&quelle=${quelle}` : ''}`);
 
   let r = await widget('karte.einzelkoordinate', festung.id);
   assert.equal(r.status, 200);
@@ -224,13 +227,13 @@ test('Widgets: Karte je Widget-Typ aus der aktiven Welt, Quellen, leerer Zustand
   assert.deepEqual((await widget('karte.einzelkoordinate', festung.id)).daten, { karte: null, hinweis: 'Die Quelle gibt es nicht mehr' });
   assert.equal((await widget('karte.gibtsnicht')).status, 404);
 
-  // Quellen zum Auswählen beim Hinzufügen
-  r = await anfrage('GET', '/api/widgets/banner.banner/quellen');
+  // Quellen zum Auswählen beim Hinzufügen (fragt das Handy, mit Token)
+  r = await anfrage('GET', '/api/widgets/banner.banner/quellen', max);
   assert.equal(r.daten.quelle, 'banner');
   assert.deepEqual(r.daten.quellen.find((q) => q.id === banner.id), { id: banner.id, name: 'Kreuz' });
-  r = await anfrage('GET', '/api/widgets/sammelobjekte.einzelobjekt/quellen');
+  r = await anfrage('GET', '/api/widgets/sammelobjekte.einzelobjekt/quellen', max);
   assert.deepEqual(r.daten.quellen.find((q) => q.id === 'rib'), { id: 'rib', name: 'Rippenzier', unter: 'Netherfestung · gefunden' });
-  assert.deepEqual((await anfrage('GET', '/api/widgets/portale.verbindungen/quellen')).daten, { quelle: null, quellen: [] });
+  assert.deepEqual((await anfrage('GET', '/api/widgets/portale.verbindungen/quellen', max)).daten, { quelle: null, quellen: [] });
 
   // Von außen nur mit Anzeige-Link oder als angemeldetes Handy
   if (AUSSEN) {
@@ -263,16 +266,19 @@ test('Widget-Dashboard unter /dashboard: Anzeige-Link bleibt beim Umleiten, eige
 test('Widget-Layout: Handy speichert, Anzeige liest ihres und meldet ihre Reihen, live über /ws', async () => {
   const max = await beitreten('Max');
   const [board] = (await anfrage('GET', '/api/anzeigen', max)).daten.anzeigen;
-  // Anzeige auf dem Board-Gerät (localhost, ohne Link) ist „Board“
-  let r = await anfrage('GET', '/api/anzeige/layout');
+  // Die Anzeige „Board“ liest mit ihrem Link; ohne Link ist auch localhost gesperrt
+  const q = new URL(board.link).search;
+  assert.equal((await anfrage('GET', '/api/anzeige/layout')).status, 403, 'localhost ohne Link');
+  let r = await anfrage('GET', `/api/anzeige/layout${q}`);
   assert.deepEqual([r.status, r.daten.anzeige.id], [200, board.id]);
-  const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws?rolle=anzeige`);
+  const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws${q}&rolle=anzeige`);
   const nachrichten = [];
   ws.onmessage = (e) => nachrichten.push(JSON.parse(e.data));
   await new Promise((ok) => { ws.onopen = ok; });
 
-  assert.deepEqual((await anfrage('PUT', '/api/anzeige/reihen', null, { reihen: 24 })).daten, { reihen: 24 });
-  assert.equal((await anfrage('PUT', '/api/anzeige/reihen', null, { reihen: 'x' })).status, 400);
+  assert.equal((await anfrage('PUT', '/api/anzeige/reihen', null, { reihen: 24 })).status, 403, 'Reihen melden nur mit Link');
+  assert.deepEqual((await anfrage('PUT', `/api/anzeige/reihen${q}`, null, { reihen: 24 })).daten, { reihen: 24 });
+  assert.equal((await anfrage('PUT', `/api/anzeige/reihen${q}`, null, { reihen: 'x' })).status, 400);
   assert.equal((await anfrage('GET', '/api/anzeigen', max)).daten.anzeigen.find((a) => a.id === board.id).reihen, 24);
 
   const layout = { layer: [{ id: 'l1', name: 'Start', instanzen: [{ id: 'w1', typ: 'sammelobjekte.status', stufe: 'standard', x: 28, y: 0 }] }], aktiverLayer: 'l1' };
@@ -280,10 +286,10 @@ test('Widget-Layout: Handy speichert, Anzeige liest ihres und meldet ihre Reihen
   r = await anfrage('PUT', `/api/anzeigen/${board.id}/layout`, max, layout);
   assert.equal(r.status, 200);
   assert.equal((await anfrage('PUT', `/api/anzeigen/${board.id}/layout`, max, { layer: [] })).status, 422);
-  r = await anfrage('GET', '/api/anzeige/layout');
+  r = await anfrage('GET', `/api/anzeige/layout${q}`);
   assert.deepEqual([r.daten.reihen, r.daten.layout.layer[0].instanzen[0].typ], [24, 'sammelobjekte.status']);
   assert.equal((await anfrage('PUT', `/api/anzeigen/${board.id}/vollbild`, max, { instanzId: 'w1' })).daten.vollbild, 'w1');
-  assert.equal((await anfrage('GET', '/api/anzeige/layout')).daten.vollbild, 'w1', 'die Anzeige sieht das Vollbild');
+  assert.equal((await anfrage('GET', `/api/anzeige/layout${q}`)).daten.vollbild, 'w1', 'die Anzeige sieht das Vollbild');
   assert.equal((await anfrage('PUT', `/api/anzeigen/${board.id}/vollbild`, max, { instanzId: 'gibt-es-nicht' })).status, 422);
   assert.equal((await anfrage('PUT', `/api/anzeigen/${board.id}/vollbild`, max, { instanzId: null })).daten.vollbild, null);
   await new Promise((ok) => setTimeout(ok, 150));
@@ -298,6 +304,72 @@ test('Widget-Layout: Handy speichert, Anzeige liest ihres und meldet ihre Reihen
     const res = await fetch(`http://${AUSSEN}:${PORT}/api/anzeige/layout${new URL(tablet.link).search}`);
     assert.deepEqual((await res.json()).anzeige, { id: tablet.id, name: 'Tablet' });
   }
+});
+
+test('CORS: nur erlaubte Ursprünge und der eigene, alle Methoden, auch für /ws', async () => {
+  const mit = (origin, pfad = '/api/server', method = 'GET', extra = {}) =>
+    fetch(BASIS + pfad, { method, headers: { ...(origin && { origin }), ...extra } });
+  // Preflight mit erlaubtem Ursprung: 204, Methoden inklusive PUT und DELETE
+  let r = await mit('https://board.beispiel.de', '/api/orte/welten', 'OPTIONS', { 'access-control-request-method': 'PUT' });
+  assert.equal(r.status, 204);
+  assert.equal(r.headers.get('access-control-allow-origin'), 'https://board.beispiel.de');
+  assert.match(r.headers.get('access-control-allow-methods'), /PUT/);
+  assert.match(r.headers.get('access-control-allow-methods'), /DELETE/);
+  assert.equal(r.headers.get('vary'), 'Origin');
+  r = await mit('http://localhost:5173', '/api/anzeigen', 'OPTIONS', { 'access-control-request-method': 'DELETE' });
+  assert.equal(r.status, 204, 'zweiter Ursprung aus der Liste');
+  // Fremder Ursprung: 403, auch beim Preflight
+  assert.equal((await mit('https://fremd.de', '/api/orte/welten', 'OPTIONS', { 'access-control-request-method': 'PUT' })).status, 403);
+  r = await mit('https://fremd.de');
+  assert.deepEqual([r.status, (await r.json()).fehler, r.headers.get('access-control-allow-origin')], [403, 'Ursprung nicht erlaubt', null]);
+  // Eigener Ursprung (Seite kommt vom Server) immer, ohne Origin unverändert, außerhalb von /api egal
+  r = await mit(BASIS);
+  assert.deepEqual([r.status, r.headers.get('access-control-allow-origin')], [200, BASIS]);
+  assert.equal((await mit(null)).status, 200);
+  assert.equal((await mit('https://fremd.de', '/regeln.js')).status, 200, 'statische Dateien sind kein API-Pfad');
+  // WebSocket: Browser erzwingen bei /ws kein CORS, deshalb lehnt der Server fremde Ursprünge selbst ab
+  const max = await beitreten('Max');
+  const ws = (origin) => new Promise((ok) => {
+    const s = new WsClient(`ws://127.0.0.1:${PORT}/ws?token=${encodeURIComponent(max)}`, { headers: { origin } });
+    s.once('open', () => { s.close(); ok('offen'); });
+    s.once('unexpected-response', (_, res) => { ok(`abgelehnt ${res.statusCode}`); });
+    s.once('error', () => ok('fehler'));
+  });
+  assert.equal(await ws('https://fremd.de'), 'abgelehnt 403');
+  assert.equal(await ws('https://board.beispiel.de'), 'offen');
+  assert.equal(await ws(BASIS), 'offen', 'eigener Ursprung');
+});
+
+test('Board-PIN hat mindestens 6 Ziffern: kurze RAUM_PIN lehnt der Start ab, alte 4-stellige pin.txt wird ersetzt', async () => {
+  const cwd = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const ordner = mkdtempSync(path.join(tmpdir(), 'kb-pin-'));
+  const start = (env) => new Promise((ok) => {
+    const p = spawn(process.execPath, ['src/server.js'], { cwd, env: { ...process.env, PORT: '3298', DATEN_ORDNER: ordner, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    let aus = '';
+    p.stdout.on('data', (d) => { aus += d; });
+    p.stderr.on('data', (d) => { aus += d; });
+    p.stdout.on('data', (d) => { if (String(d).includes('läuft')) p.kill('SIGTERM'); });
+    p.once('exit', (code) => ok({ code, aus }));
+  });
+  let r = await start({ RAUM_PIN: '4711' });
+  assert.equal(r.code, 1);
+  assert.match(r.aus, /mindestens 6 Ziffern/);
+  writeFileSync(path.join(ordner, 'pin.txt'), '1234');
+  r = await start({});
+  assert.equal(r.code, 0);
+  assert.match(r.aus, /neue PIN mit 6 Ziffern/);
+  assert.match(readFileSync(path.join(ordner, 'pin.txt'), 'utf8'), /^\d{6}$/, 'pin.txt hat jetzt 6 Ziffern');
+  rmSync(ordner, { recursive: true, force: true });
+});
+
+test('PIN-Sperre hinter dem Tunnel: CF-Connecting-IP von loopback zählt als Adresse, je Adresse eigene Sperre', async () => {
+  const falsch = (ip) => fetch(`${BASIS}/api/beitreten/konten`, { method: 'POST',
+    headers: { 'content-type': 'application/json', ...(ip && { 'cf-connecting-ip': ip }) }, body: JSON.stringify({ pin: '0000' }) });
+  for (let i = 0; i < 5; i += 1) assert.equal((await falsch('203.0.113.5')).status, 401);
+  assert.equal((await falsch('203.0.113.5')).status, 429, 'nach 5 Fehlversuchen gesperrt');
+  assert.equal((await falsch('203.0.113.6')).status, 401, 'andere Adresse hinter dem Tunnel: eigene Zählung');
+  assert.equal((await fetch(`${BASIS}/api/beitreten/konten`, { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pin: '471100' }) })).status, 200, 'ohne Header (direkt, 127.0.0.1) nicht mitgesperrt');
 });
 
 test('Rüstungs-Baukasten wird ausgeliefert (Texturen, Module, Manifest)', async () => {

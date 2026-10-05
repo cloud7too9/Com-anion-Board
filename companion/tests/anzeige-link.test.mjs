@@ -7,7 +7,7 @@ import { mkdirSync, mkdtempSync, rmSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { tmpdir, networkInterfaces } from "node:os";
 import path from "node:path";
-import { CHROMIUM_OPTIONEN } from "./hilfen.mjs";
+import { CHROMIUM_OPTIONEN, anzeigeLinkQuery } from "./hilfen.mjs";
 
 const HIER = fileURLToPath(new URL(".", import.meta.url));
 const DIR = path.join(HIER, "bilder");
@@ -22,7 +22,7 @@ const AUSSEN = Object.values(networkInterfaces()).flat().find((n) => n && n.fami
 if (!AUSSEN) { console.log("OK   übersprungen: keine Netzwerkadresse für den Zugriff „von außen“"); process.exit(0); }
 
 const TMP = mkdtempSync(path.join(tmpdir(), "anzeige-link-"));
-const PORT = 3189, PIN = "4711", BOARD = `http://127.0.0.1:${PORT}`;
+const PORT = 3189, PIN = "471100", BOARD = `http://127.0.0.1:${PORT}`;
 const board = spawn(process.execPath, ["src/server.js"], {
   cwd: path.join(HIER, "../../koordinaten-board/server"),
   env: { ...process.env, PORT: String(PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten"), OEFFENTLICHE_URL: `http://${AUSSEN}:${PORT}` },
@@ -45,8 +45,10 @@ const warteAuf = (p, fn, arg, ms = 8000) => p.waitForFunction(fn, arg, { timeout
 try {
   for (let i = 0; i < 60; i++) { try { if ((await fetch(`${BOARD}/api/server`)).ok) break; } catch {} await schlafen(200); }
   await schlafen(300);
-  pruefe(new RegExp(`Anzeige auf anderem Gerät: http://${AUSSEN.replace(/\./g, "\\.")}:${PORT}/anzeige\\?anzeige=a_\\d+&schluessel=[\\w-]+`).test(konsole),
+  pruefe(new RegExp(`Anzeige: http://${AUSSEN.replace(/\./g, "\\.")}:${PORT}/anzeige\\?anzeige=a_\\d+&schluessel=[\\w-]+`).test(konsole),
     "Konsole nennt den Anzeige-Link beim Start");
+  pruefe(/anzeige-link\.txt/.test(konsole) && (await anzeigeLinkQuery(path.join(TMP, "daten"))).startsWith("?anzeige=a_"),
+    "Server schreibt den Link nach daten/anzeige-link.txt (für die Startskripte)");
 
   // ---- Max tritt bei, öffnet das Board-Sheet ----
   const max = await seite();
@@ -101,10 +103,12 @@ try {
   pruefe(await warteAuf(tv, () => document.querySelector(".a-kopf") && !document.querySelector(".a-fehler")), "Mit dem neuen Link läuft sie wieder");
   await max.screenshot({ path: `${DIR}/z4-anzeigen-zwei.png` });
 
-  // Board-Gerät selbst (localhost) braucht keinen Link
+  // Auch das Board-Gerät selbst (localhost) braucht den Link (Umbau Phase 1)
   const lokal = await seite({ width: 1280, height: 720 });
   await lokal.goto(`${BOARD}/anzeige`);
-  pruefe(await warteAuf(lokal, () => document.querySelector(".a-kopf") && !document.querySelector(".a-fehler")), "localhost: Anzeige ohne Link");
+  pruefe(await warteAuf(lokal, () => document.querySelector(".a-fehler")?.textContent.includes("Anzeige-Link")), "localhost ohne Link: gesperrt");
+  await lokal.goto(`${BOARD}/anzeige${await anzeigeLinkQuery(path.join(TMP, "daten"))}`);
+  pruefe(await warteAuf(lokal, () => document.querySelector(".a-kopf") && !document.querySelector(".a-fehler")), "localhost mit Link: Anzeige läuft");
 } catch (f) {
   pruefe(false, `Abbruch: ${f.stack || f}`);
 } finally {

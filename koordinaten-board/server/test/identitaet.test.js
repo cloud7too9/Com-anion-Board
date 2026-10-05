@@ -8,7 +8,7 @@ import { identitaet, pinHashen, pinPasst, AnmeldeFehler } from '../src/identitae
 
 const neu = () => {
   const daten = new Daten(mkdtempSync(path.join(tmpdir(), 'kb-ident-')));
-  return { daten, ident: identitaet({ daten, geheim: 'test-geheim', boardPin: '4711' }) };
+  return { daten, ident: identitaet({ daten, geheim: 'test-geheim', boardPin: '471100' }) };
 };
 const lehntAb = async (fn, status, text) => assert.rejects(fn, (f) => f instanceof AnmeldeFehler && f.status === status && (!text || f.message === text));
 const anfrage = (token) => ({ headers: token ? { authorization: `Bearer ${token}` } : {} });
@@ -25,10 +25,10 @@ test('PIN nur gehasht (scrypt mit Salz), Prüfung in konstanter Zeit', async () 
 test('Beitreten: Account anlegen, mit eigener PIN wieder anmelden, Gerät trägt das Vertrauen', async () => {
   const { daten, ident } = neu();
   await lehntAb(() => ident.anmelden({ pin: '0000', name: 'Max', kontoPin: '2468', ip: 'a' }), 401, 'Falsche PIN');
-  await lehntAb(() => ident.anmelden({ pin: '4711', name: ' ', kontoPin: '2468', ip: 'a' }), 400, 'Name fehlt');
-  await lehntAb(() => ident.anmelden({ pin: '4711', name: 'Max', kontoPin: '12', ip: 'a' }), 400, 'Deine PIN hat 4 bis 8 Ziffern');
+  await lehntAb(() => ident.anmelden({ pin: '471100', name: ' ', kontoPin: '2468', ip: 'a' }), 400, 'Name fehlt');
+  await lehntAb(() => ident.anmelden({ pin: '471100', name: 'Max', kontoPin: '12', ip: 'a' }), 400, 'Deine PIN hat 4 bis 8 Ziffern');
 
-  const erst = await ident.anmelden({ pin: '4711', name: ' Max ', kontoPin: '2468', ip: 'a' });
+  const erst = await ident.anmelden({ pin: '471100', name: ' Max ', kontoPin: '2468', ip: 'a' });
   assert.equal(erst.neu, true);
   assert.equal(erst.name, 'Max');
   const ich = ident.werBistDu(anfrage(erst.token));
@@ -36,8 +36,8 @@ test('Beitreten: Account anlegen, mit eigener PIN wieder anmelden, Gerät trägt
   assert.equal(daten.inhalt.benutzer[0].pinHash.startsWith('scrypt:'), true, 'gespeichert wird nur der Hash');
   assert.deepEqual(daten.benutzerListe(), [{ id: erst.id, name: 'Max' }], 'Liste ohne Hash');
 
-  await lehntAb(() => ident.anmelden({ pin: '4711', name: 'max', kontoPin: '1111', ip: 'b' }), 401, 'Falsche PIN für Max');
-  const zweit = await ident.anmelden({ pin: '4711', name: 'max', kontoPin: '2468', ip: 'b' });
+  await lehntAb(() => ident.anmelden({ pin: '471100', name: 'max', kontoPin: '1111', ip: 'b' }), 401, 'Falsche PIN für Max');
+  const zweit = await ident.anmelden({ pin: '471100', name: 'max', kontoPin: '2468', ip: 'b' });
   assert.deepEqual([zweit.neu, zweit.id, zweit.name], [false, erst.id, 'Max'], 'gleicher Account, zweites Gerät');
   assert.notEqual(zweit.token, erst.token);
   assert.equal(daten.inhalt.geraete.length, 2);
@@ -55,11 +55,11 @@ test('Beitreten: Account anlegen, mit eigener PIN wieder anmelden, Gerät trägt
 
 test('Sperre gegen Durchprobieren: Board-PIN je Gerät, Account-PIN je Gerät und Account', async () => {
   const { ident } = neu();
-  await ident.anmelden({ pin: '4711', name: 'Lena', kontoPin: '1357', ip: 'x' });
-  for (let i = 0; i < 5; i++) await lehntAb(() => ident.anmelden({ pin: '4711', name: 'Lena', kontoPin: '0000', ip: 'y' }), 401);
-  await lehntAb(() => ident.anmelden({ pin: '4711', name: 'Lena', kontoPin: '1357', ip: 'y' }), 429);
-  assert.equal((await ident.anmelden({ pin: '4711', name: 'Lena', kontoPin: '1357', ip: 'z' })).neu, false, 'anderes Gerät nicht gesperrt');
+  await ident.anmelden({ pin: '471100', name: 'Lena', kontoPin: '1357', ip: 'x' });
+  for (let i = 0; i < 5; i++) await lehntAb(() => ident.anmelden({ pin: '471100', name: 'Lena', kontoPin: '0000', ip: 'y' }), 401);
+  await lehntAb(() => ident.anmelden({ pin: '471100', name: 'Lena', kontoPin: '1357', ip: 'y' }), 429);
+  assert.equal((await ident.anmelden({ pin: '471100', name: 'Lena', kontoPin: '1357', ip: 'z' })).neu, false, 'anderes Gerät nicht gesperrt');
   for (let i = 0; i < 5; i++) assert.throws(() => ident.konten('9999', 'q'), (f) => f.status === 401);
-  assert.throws(() => ident.konten('4711', 'q'), (f) => f.status === 429);
-  assert.deepEqual(ident.konten('4711', 'r').map((k) => k.name), ['Lena']);
+  assert.throws(() => ident.konten('471100', 'q'), (f) => f.status === 429);
+  assert.deepEqual(ident.konten('471100', 'r').map((k) => k.name), ['Lena']);
 });

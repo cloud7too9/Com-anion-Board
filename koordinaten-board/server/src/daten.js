@@ -419,7 +419,7 @@ export class Daten {
 
   // ---------- Anzeigen: Geräte mit Anzeige-Link ----------
 
-  /** Beim ersten Start gibt es eine Anzeige „Board“ (läuft meist auf dem Server selbst, localhost) */
+  /** Beim ersten Start gibt es eine Anzeige „Board“; ihr Link steht in der Konsole und in daten/anzeige-link.txt */
   anzeigenSicherstellen() {
     if (this.inhalt.anzeigen.length) return;
     this.inhalt.anzeigen.push({ id: this.neueId('a'), name: 'Board', schluessel: neuerSchluessel(), am: new Date().toISOString() });
@@ -455,12 +455,6 @@ export class Daten {
     a.schluessel = neuerSchluessel();
     this.speichernVerzoegert();
     return kopie(a);
-  }
-
-  /** Die Anzeige des Board-Geräts selbst (localhost ohne Link): die erste, beim ersten Start „Board“ */
-  anzeigeLokal() {
-    this.anzeigenSicherstellen();
-    return kopie(this.inhalt.anzeigen[0]);
   }
 
   /** Layout einer Anzeige: { anzeige, reihen, layout, vollbild } – layout null, solange keins gespeichert ist;

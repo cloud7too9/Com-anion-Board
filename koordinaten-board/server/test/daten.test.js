@@ -191,7 +191,8 @@ test('Anzeigen: „Board“ beim ersten Start, Schlüssel prüfen und neu erzeug
 
 test('Widget-Layout je Anzeige: Form wird geprüft, Reihen meldet die Anzeige', () => {
   const d = new Daten(ordner());
-  const a = d.anzeigeLokal();
+  d.anzeigenSicherstellen();
+  const [a] = d.anzeigenListe();   // beim ersten Start „Board“
   assert.equal(a.name, 'Board');
   assert.deepEqual(d.anzeigeLayout(a.id), { anzeige: { id: a.id, name: 'Board' }, reihen: null, layout: null, vollbild: null });
 
