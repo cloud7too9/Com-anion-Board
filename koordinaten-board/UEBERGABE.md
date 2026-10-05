@@ -1,6 +1,6 @@
 # Übergabe · Koordinaten-Board
 
-Stand: 29.09.2026 · Einstieg für einen neuen Chat
+Stand: 05.10.2026 · Einstieg für einen neuen Chat
 
 Arbeitsweise, Zusammenspiel mit der Companion und projektübergreifende Entscheidungen stehen in der [Übergabe im Repo-Wurzelordner](../UEBERGABE.md). Funktionen, Starten, Fehlersuche und Einstellungen stehen in `README.md`.
 
@@ -8,21 +8,21 @@ Arbeitsweise, Zusammenspiel mit der Companion und projektübergreifende Entschei
 
 ## Stand: Server der Companion + Anzeige im Zimmer
 
-**Zusammenführung (Branch `board/zusammenfuehrung`, Entscheidung von Max am 29.09.2026):** Das Board ist der eine Server für Companion und Anzeige. Es liefert die Companion unter `/` aus, hält alle Daten (`daten.json`) und synchronisiert live. Die eigene Handy-Oberfläche (React-Steuerung) ist abgelöst, der Client ist nur noch die Anzeige unter `/anzeige`. Die alten Board-Orte wurden nicht übernommen (Max: neu anfangen), `zustand.json` bleibt als Sicherung liegen.
+**Zusammenführung (Branch `board/zusammenfuehrung`, Entscheidung von Max am 29.09.2026):** Das Board ist der eine Server für Companion und Anzeige. Es liefert die Companion unter `/` aus, hält alle Daten (`daten.db`, SQLite seit Umbau Phase 4) und synchronisiert live. Die eigene Handy-Oberfläche (React-Steuerung) ist abgelöst, der Client ist nur noch die Anzeige unter `/anzeige`. Die alten Board-Orte wurden nicht übernommen (Max: neu anfangen), `zustand.json` bleibt als Sicherung liegen.
 
-Ein Gerät im Zimmer zeigt die Orte der aktiven Welt groß an. Alle anderen öffnen per QR-Code die Companion, treten mit Board-PIN und Account (Name + eigene PIN) bei und lesen **Chunkbase-Seed-Map-Screenshots per OCR** aus.
+Ein Gerät im Zimmer zeigt die Orte der aktiven Welt groß an. Alle anderen öffnen per QR-Code die Companion, treten mit Board-PIN und Account (Name + eigene PIN) bei und lesen Chunkbase-Seed-Map-Screenshots am Handy per Texterkennung aus (seit Umbau Phase 3).
 
 - **Technik**:
-  - Server: Fastify 5 (+ websocket/multipart/static)
+  - Server: Fastify 5 (+ websocket/static)
   - Client: Vite + React 19 + TypeScript
-  - Speicher: JSON-Datei mit atomarem Speichern
+  - Speicher: SQLite (`node:sqlite`, WAL) in `daten.db` über `speicher.js`; eine alte `daten.json` übernimmt der Server beim ersten Start einmal
   - Anmeldung: PIN + HMAC-Token
   - Texterkennung: seit Umbau Phase 3 am Handy (`companion/texterkennung.js`, tesseract.js im Browser, `eng` best_int), Feature-Namen per Levenshtein unscharf zugeordnet; der Server lädt nur die Auswertung per `node:vm`
-- **Starten**: `start.bat` auf Windows (Node 20+) oder `start.sh`. Die Anzeige unter `/anzeige` öffnet jedes Gerät nur mit **Anzeige-Link** (Branch `board/anzeige-link`; seit Umbau Phase 1 auch der Board-Rechner selbst, Link in `daten/anzeige-link.txt` für die Startskripte): `daten.anzeigen` = `{ id, name, schluessel }`, beim ersten Start „Board“. `/api/anzeige` und `/ws?rolle=anzeige` prüfen `?anzeige=…&schluessel=…`; „Neuer Schlüssel“ trennt verbundene Anzeigen mit altem Link (Code 4003). Verwaltet wird in der Companion (Board → Anzeigen) über `GET/POST /api/anzeigen`, `PUT /api/anzeigen/:id`, `POST /api/anzeigen/:id/schluessel`, `GET /api/anzeigen/:id/qr` (SVG vom Server, Paket `qrcode`). Der Link nutzt dieselbe Adresse wie der QR-Code der Handys; die Konsole nennt ihn beim Start. Die Anzeige merkt sich den Schlüssel (`client/src/lib/zugang.ts`).
+- **Starten**: `start.bat` auf Windows (Node 22.13+) oder `start.sh`. Die Anzeige unter `/anzeige` öffnet jedes Gerät nur mit **Anzeige-Link** (Branch `board/anzeige-link`; seit Umbau Phase 1 auch der Board-Rechner selbst, Link in `daten/anzeige-link.txt` für die Startskripte): `daten.anzeigen` = `{ id, name, schluessel }`, beim ersten Start „Board“. `/api/anzeige` und `/ws?rolle=anzeige` prüfen `?anzeige=…&schluessel=…`; „Neuer Schlüssel“ trennt verbundene Anzeigen mit altem Link (Code 4003). Verwaltet wird in der Companion (Board → Anzeigen) über `GET/POST /api/anzeigen`, `PUT /api/anzeigen/:id`, `POST /api/anzeigen/:id/schluessel`, `GET /api/anzeigen/:id/qr` (SVG vom Server, Paket `qrcode`). Der Link nutzt dieselbe Adresse wie der QR-Code der Handys; die Konsole nennt ihn beim Start. Die Anzeige merkt sich den Schlüssel (`client/src/lib/zugang.ts`).
 - **Tests**: `npm test` → 59 Tests (SQLite-Umzug 1, Auswertung der Texterkennung 13 + Banner 3, beide gegen `companion/texterkennung.js`; die echte OCR prüft `companion/tests/live.test.mjs` im Browser; CORS, Client-IP hinter dem Tunnel, PIN-Länge je 1, Identität 3, Companion-API 12 – der Anzeige-Link wird über die Netzwerkadresse des Rechners „von außen“ geprüft, Daten + Anzeige-Sicht 9, Regeln 7 – davon einer, der die Rüstungs-Stammdaten gegen das Baukasten-Manifest prüft, Karten 4, Netzwerk 3, PIN-Sperre 2), alle grün. Die API-Tests starten einen echten Server-Prozess mit leerem Datenordner.
 - **Server-Aufbau**:
   - `daten.js`: Welten, Typen, Instanzen, Sammelobjekte, Banner, Rüstungs-Sets (`ruestung`, für alle Welten, Branch `bereich/ruestung`), Portale, Einstellungen (`titel`, `qrZeigen`, `aktiveWelt`). Abläufe wie der DEMO-Mock der Companion.
-  - **Welt-Import** (Branch `bereich/karte-welt-upload`): `biomeLesen`/`biomeSetzen`/`biomeLoeschen` je Welt in `daten/biome/<weltId>.json` (atomar, nacheinander geschrieben), Route `GET/PUT/DELETE /api/welten/:id/biome` mit `bodyLimit` 64 MB, Regel `biomImportPruefen` aus `regeln.js`. Beim Laden entfernt `biomPunkteEntfernen()` alte Biom-Orte aus Screenshots (Sicherung `daten.vor-welt-import.json`). `server.js` liefert Worker, Dekoder, `biom-ids.js` und `vendor/` aus `companion/` aus.
+  - **Welt-Import** (Branch `bereich/karte-welt-upload`): `biomeLesen`/`biomeSetzen`/`biomeLoeschen` je Welt in `daten.db` (Tabellen `biome_import`, `biome_kacheln`; vor Umbau Phase 4 `daten/biome/<weltId>.json`), Route `GET/PUT/DELETE /api/welten/:id/biome` mit `bodyLimit` 64 MB, Regel `biomImportPruefen` aus `regeln.js`. Beim Übernehmen einer `daten.json` entfernt `biomPunkteEntfernen()` alte Biom-Orte aus Screenshots (Sicherung `daten.vor-welt-import.json`). `server.js` liefert Worker, Dekoder, `biom-ids.js` und `vendor/` aus `companion/` aus.
   - `server.js` liefert zusätzlich `companion/ruestungs-baukasten/` unter `/ruestungs-baukasten/` aus (Texturen, fertige Icons, ES-Module für Umfärben und 3D-Figur).
   - `companion-api.js`: REST unter `/api` nach dem Vertrag in `companion-prototyp.html` (Abschnitt 4), Bearer-Token aus dem Beitreten. Dazu `/api/board/einstellungen` und `PUT /api/orte/instanzen/:id/angeheftet`. Jede Änderung meldet per WebSocket `{ art:"geaendert", bereich, weltId }`.
   - `regeln.js`: lädt `companion/regeln.js` per `node:vm` – dieselben Regeln wie am Handy, nichts nachgebaut.
@@ -39,7 +39,7 @@ Ein Gerät im Zimmer zeigt die Orte der aktiven Welt groß an. Alle anderen öff
   - CORS seit Umbau Phase 1 für alle `/api`-Pfade und `/ws`, aber nur für Ursprünge aus `ERLAUBTE_URSPRUENGE` und den eigenen; Board-PIN mit mindestens 6 Ziffern (`BOARD_PIN`), Sperre nach 5 falschen PINs für 60 s (Board-PIN je IP, eigene PIN je IP und Account; hinter dem Tunnel zählt `CF-Connecting-IP`).
   - „Aufs Board“: WebSocket-Nachrichten `zeigen` / `verbergen`, an alle `gezeigt`. Die Karte wird geprüft (`server/src/zeigen.js`), nur im Speicher gehalten und auf der Anzeige groß gezeigt (`client/src/anzeige/Gezeigt.tsx`). Optional `typ` → Kennblock neben dem Titel; Block `bild` (PNG/JPEG/WebP als Data-URL, max. 200 KB) links neben den übrigen.
 - **Kennblöcke**: Die Anzeige lädt sie unter `/icons/…`, der Server liefert dafür `companion/icons` aus (keine Kopie mehr im Client). `OrtIcon` zeigt das Bild, wenn der Typ eins hat (`lib/kennbloecke.ts`), sonst das Linien-Icon der Kategorie. Pfadruinen fehlt noch ein Bild.
-- **Aufräumen möglich**: `client/src/stil.css` enthält noch Regeln der alten Handy-Oberfläche (`.ort`, `.sheet` …), `komponenten/Icon.tsx` Symbole, die nur sie brauchte.
+- **Aufgeräumt (05.10.2026)**: `client/src/stil.css` enthält nur noch Tokens, die gemeinsamen Bausteine (Chips, Tabs, Pillen) und die Anzeige; die Regeln der alten Handy-Oberfläche (`.ort`, `.sheet` …) und die nur dort gebrauchten Symbole in `komponenten/Icon.tsx` sind weg.
 - **Git**: Der Verlauf ist mit allen Commits im Repo erhalten (Ordner `koordinaten-board/`). Letzter Commit hier: „QR-Code lernt die tatsächlich erreichbare Adresse“ (früher `75b00b2`).
 - ⚠️ **Ein Commit fehlt noch**: Laut alter Übergabe steht `main` bei Max auf `0b1d2f4` mit 15 Tests (Netzwerk 4). Dieser Commit war nicht im Zip. Bei Gelegenheit aus dem lokalen Board-Repo nachziehen, z. B. per `git format-patch 75b00b2..0b1d2f4` und im Repo mit `git am --directory=koordinaten-board` einspielen.
 

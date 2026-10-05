@@ -23,7 +23,7 @@
   3. A7 (Größenstufen je Widget): Planungsrunde mit Max
   4. Inhalte, die noch nicht beschrieben sind (Warteliste, Kapitel 4)
 - **Git:**
-  - **Repo-Umzug am 05.10.2026** nach `Com-anion-Board` (Kapitel 3). `main` = Start-Commit ohne Verlauf; Phase 1 des Umbaus liegt auf `claude/vibrant-mccarthy-qzhzq4` und wartet auf PR und Merge durch Max.
+  - **Repo-Umzug am 05.10.2026** nach `Companion-Board` (Kapitel 3). `main` = Start-Commit ohne Verlauf, danach die Umbau-PRs #1–#7 (Phasen 1–5, Pi-Vorbereitung, Anleitung).
   - **Gemergt wird nur nach Rückfrage bei Max**, auch wenn Claude den Merge ausführt.
 - **Tests:** alle grün in `main`, lokal und in der CI (Kapitel 6).
 - **Für Max wichtig:** Seit B2 gelten alte Anmeldungen nicht mehr. Jedes Handy meldet sich einmal neu an, mit Name und eigener PIN.
@@ -79,9 +79,9 @@ Pfade unter `model/`, `lib/`, `components/` und `features/` liegen in `companion
 
 ## 3. Branches und Mergen
 
-- **Repo-Umzug (05.10.2026):** Gearbeitet wird seitdem in `cloud7too9/Com-anion-Board`. `main` dort ist der Stand von `flexibel-visionboard` (`main` 9d5be46, Merge von PR #26) als **ein Start-Commit ohne Verlauf**. Die 16 gemergten Branches und alle PR-Nummern bis #26 gibt es nur noch im alten Repo; löschen muss Max dort nichts mehr. Die PR-Nummern in dieser Datei meinen das alte Repo.
+- **Repo-Umzug (05.10.2026):** Gearbeitet wird seitdem in `cloud7too9/Companion-Board`. `main` dort ist der Stand von `flexibel-visionboard` (`main` 9d5be46, Merge von PR #26) als **ein Start-Commit ohne Verlauf**. Die 16 gemergten Branches und alle PR-Nummern bis #26 gibt es nur noch im alten Repo; löschen muss Max dort nichts mehr. Die PR-Nummern in dieser Datei meinen das alte Repo.
 - **Mitgenommen:** `bereich/karte-mcworld` als eigener Stand ohne Eltern (ältere Fassung der Biom-Phasen 2–4: Prüfseite `welt-pruefen.html`, `welt-import.test.mjs`). #7 und #19 haben den Inhalt ersetzt; der Branch ist zum Nachschlagen, ein Merge scheitert absichtlich an „unrelated histories“.
-- **Umbau:** je Phase ein Branch `umbau/<phase>` mit PR gegen `main` (`UMBAUPLAN.md`). Phase 1 läuft auf `claude/vibrant-mccarthy-qzhzq4` (Cloud-Sitzung, Branchname fest vorgegeben); Max kann ihn auf GitHub in `umbau/server-absichern` umbenennen.
+- **Umbau:** je Phase ein Branch `umbau/<phase>` mit PR gegen `main` (`UMBAUPLAN.md`). Gemergt sind #1 (Phase 1, Branch `claude/vibrant-mccarthy-qzhzq4` in der Rolle von `umbau/server-absichern`), #2 `umbau/api-adresse`, #3 `umbau/ocr-im-browser`, #4 `umbau/sqlite`, #5 `umbau/netlify`, #6 `umbau/pi-dienste`, #7 `umbau/anleitung-trixie`. Die Branches sind nach dem Merge gelöscht.
 - **Mergen:** nur nach Rückfrage bei Max, immer mit **„Create a merge commit“**.
 - **Empfehlung:** In den Repo-Einstellungen „Automatically delete head branches“ einschalten. Dann verschwindet ein Branch nach dem Merge, und ein PR kann nicht mehr in einen schon gemergten Branch gehen (so ging im alten Repo #8 verloren).
 
@@ -143,7 +143,7 @@ npm start                                              # Windows: start.bat (bau
 | Teil | Befehl | Ergebnis |
 |---|---|---|
 | Board-Server | `cd koordinaten-board && npm test` | 59 Tests (seit Umbau Phase 1: CORS, Client-IP hinter dem Tunnel, Board-PIN; seit Phase 3 ohne OCR; seit Phase 4 mit SQLite-Umzug) |
-| Widgets | `cd companion/widgets && npm run typecheck && npm test` | Typecheck ok, 108 Unit-Tests |
+| Widgets | `cd companion/widgets && npm run typecheck && npm test` | Typecheck ok, 110 Unit-Tests |
 | Companion und Dashboard (Playwright) | `cd companion/tests && npm test` | 17 Dateien (seit Umbau Phase 2 `getrennt`, seit Phase 5 `netlify`), dazu 20 Dekoder-Tests |
 
 **CI auf GitHub:** `.github/workflows/tests.yml` führt alle drei Teile bei jedem Pull Request und jedem Push auf `main` aus (Jobs „Board-Server“, „Widgets“, „Companion und Dashboard (Playwright)“, zusammen etwa 5 Minuten). Die Screenshots aus `companion/tests/bilder/`, darunter die Haltepunkte, hängen als Download „bilder“ am Lauf (14 Tage). Ein neuer Push auf denselben PR bricht den alten Lauf ab.
@@ -196,13 +196,12 @@ Voraussetzungen für die Playwright-Tests:
   - die Bereiche Handbuch und Baupläne
 - **Realm-Welt am iPhone** importieren (Laufzeit, Speicher). Rest von H2.
 - **Später:** B3 am echten iPhone (Home-Bildschirm-App, Flugmodus); E8 (Themes) an anderer Stelle.
-- **Aufräumen:** 16 Branches löschen (Kapitel 3).
 
 ---
 
 ## 9. Nächste Schritte
 
-0. **Umbau auf Netlify + Raspberry Pi** nach `UMBAUPLAN.md`: Phase 1 „Server absichern“ läuft (dieser Branch), danach Phase 2 „API-Adresse konfigurierbar“. Die fünf offenen Entscheidungen im Umbauplan (Domain, Board-Gerät, Startseite, `/app/`-Inhalt, Node-Version am Pi) braucht es erst ab Phase 5.
+0. **Umbau auf Netlify + Raspberry Pi** nach `UMBAUPLAN.md`: Phasen 1–5 sind gebaut. Offen sind die Probe bei Netlify (Phase 5) und Phase 6 (Pi, Tunnel, Domain), beides bei Max nach `koordinaten-board/pi/ANLEITUNG.md`; dazu die vier offenen Entscheidungen im Umbauplan (Domain, Board-Gerät, Startseite, `/app/`-Inhalt). Danach der letzte Punkt von Phase 6 (Aufräumen von `netzwerk.js` und Co., falls der Heimnetz-Betrieb vom Laptop aus nicht mehr gebraucht wird).
 1. **Bauplan „Sitzung“ (E16)** als `planung/bauplaene/Bauplan-Sitzung.md`, dann Max fragen. Fest steht:
    - Die Sitzung lebt, solange das Board läuft. Ein Neustart beginnt leer; das gespeicherte Layout der Anzeige (A6) bleibt.
    - Inhalte lassen sich während der Laufzeit live ändern.

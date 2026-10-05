@@ -2,7 +2,7 @@
 
 Stand: 05.10.2026 · Max
 
-> **Umsetzung:** Seit dem 05.10.2026 läuft der Umbau im Repo `cloud7too9/Com-anion-Board` (Start ohne Verlauf, der alte Verlauf liegt in `flexibel-visionboard`). Die Haken in den Phasen werden hier gesetzt; den Stand je Phase führt [`UEBERGABE.md`](UEBERGABE.md), Kapitel 1 und 9. Phase 1 wird auf dem Branch `claude/vibrant-mccarthy-qzhzq4` gebaut (die Rolle von `umbau/server-absichern`).
+> **Umsetzung:** Seit dem 05.10.2026 läuft der Umbau im Repo `cloud7too9/Companion-Board` (Start ohne Verlauf, der alte Verlauf liegt in `flexibel-visionboard`). Die Haken in den Phasen werden hier gesetzt; den Stand je Phase führt [`UEBERGABE.md`](UEBERGABE.md), Kapitel 1 und 9. Phasen 1–5 sind gebaut und gemergt (PRs #1–#7); Phase 6 wartet auf Max, die Schritte stehen in [`koordinaten-board/pi/ANLEITUNG.md`](../koordinaten-board/pi/ANLEITUNG.md).
 
 ## Zielbild
 
@@ -133,7 +133,7 @@ Git: Push löst bei Netlify einen Vorschau-Build für den PR aus, dort testen, d
 - [ ] `cloudflared` installieren, benannten Tunnel anlegen, `api.deinedomain.de` zuordnen, ebenfalls als Dienst *(vorbereitet: `pi/cloudflared-config.yml`, Befehle in `pi/ANLEITUNG.md`)*
 - [ ] Domain auf Cloudflare-DNS umstellen und Netlify zuordnen (Abschnitt „Eine Domain, drei Adressen“) *(Schritte in `pi/ANLEITUNG.md`, Abschnitt 3)*
 - [ ] Probe über Mobilfunk statt WLAN: QR scannen, beitreten, Ort anlegen, Board aktualisiert sich
-- [ ] Aufräumen: `netzwerk.js`, Adress-Lernen und Firewall-Skripte werden für den Pi nicht mehr gebraucht
+- [ ] Aufräumen nach der Probe: `netzwerk.js`, Adress-Lernen und Firewall-Skripte braucht der Pi nicht mehr; sie bleiben für den Betrieb im Heimnetz vom Laptop aus (`pi/ANLEITUNG.md`, letzter Abschnitt). Entscheiden, ob dieser Betrieb noch gebraucht wird, sonst entfernen
 
 Git: Dienstdateien (`*.service`) und eine kurze Anleitung ins Repo, damit der Pi jederzeit neu aufsetzbar ist.
 
@@ -160,7 +160,7 @@ Auf dem Pi bleiben genau zwei Dienste: die API (Fastify mit WebSocket, dazu SQLi
 
 ## Offene Entscheidungen und Risiken
 
-Fünf Fragen musst du klären, bevor Phase 5 und 6 starten können.
+Vier Fragen sind noch offen, bevor Phase 6 abgeschlossen ist (die fünfte, Node-Version am Pi, ist geklärt).
 
 - [ ] Welche Domain, und lässt der Registrar das Umstellen der Nameserver zu? *(Max)*
 - [ ] Welches Gerät zeigt das Board an (TV-Browser, Tablet, Laptop)? Der Pi fällt aus, Raspberry OS Lite hat keinen Desktop. *(Max; technisch egal, jedes Gerät mit Browser und Anzeige-Link)*

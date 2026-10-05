@@ -42,7 +42,7 @@ Neben der Seite gehören `konfig.js` (Adresse des Boards, leer = der Server, der
 
 Neue Bereiche: Eintrag in `BEREICHE` + Icon in `ICON`. Ohne `mount()` zeigt die Sidebar den Bereich als „geplant“.
 Die Details jedes Bereichs werden einzeln festgelegt. Reihenfolge: Banner ✓ → Portal-Verwaltung ✓ → Rüstung ✓ → Handbuch, Baupläne.
-`entwuerfe/banner-ruestung.js` ist überholt (Banner und Rüstung sind eingebaut); die Verzauberungs-Pläne daraus lagen bis 05.10.2026 in der Rüstung und warten jetzt in `entwuerfe/handbuch-verzauberung.js` aufs Handbuch.
+Der alte Entwurf `entwuerfe/banner-ruestung.js` ist gelöscht (Banner und Rüstung sind eingebaut, der Stand liegt im Git-Verlauf); die Verzauberungs-Pläne daraus lagen bis 05.10.2026 in der Rüstung und warten jetzt in `entwuerfe/handbuch-verzauberung.js` aufs Handbuch.
 
 ## Dashboard-Ansichten (später)
 

@@ -1,6 +1,6 @@
 # Übergabe · Minecraft Companion PWA
 
-Stand: 29.09.2026 · Einstieg für einen neuen Chat
+Stand: 05.10.2026 · Einstieg für einen neuen Chat
 
 Arbeitsweise, Zusammenspiel mit dem Koordinaten-Board und projektübergreifende Entscheidungen stehen in der [Übergabe im Repo-Wurzelordner](../UEBERGABE.md). **Die zuerst lesen.** Diese Datei fasst zusammen, was in der Companion gebaut ist, was entschieden wurde und was als Nächstes kommt. Technische Einzelheiten (Funktionen, Regeln, API-Tabellen) stehen in `README.md`.
 
@@ -128,7 +128,7 @@ Max hat einen **Rüstungs-Baukasten** geschickt (Zip „ruestung“, jetzt `rues
 - **Figur**: 3D über http mit three.js r128 vom CDN (drehbar, Ständer oder Steve, Sockel und Hintergrund je Dimension); ohne three.js 2D; als Datei nur die Icons, weil `file://` Canvas-Pixel und ES-Module sperrt. Icons immer aus `fertig/items/` (gehen auch als Datei).
 - **Anpassung am Baukasten**: `figur3d.js` hat eine Option `abstand` (Kamera-Abstand, Standard wie vorher 104), damit der Helm nicht am Rand klebt. Sonst ist der Baukasten unverändert.
 - **Amboss-Pläne** aus dem alten Entwurf (Helm 27, Harnisch 13, Beinschutz 28, Stiefel 49 XP-Level) – **in Bedrock noch nicht geprüft**. Seit 05.10.2026 nicht mehr in der Rüstung, sondern als Entwurf fürs Handbuch (`entwuerfe/handbuch-verzauberung.js`).
-- `entwuerfe/banner-ruestung.js` ist damit überholt.
+- `entwuerfe/banner-ruestung.js` war damit überholt und ist gelöscht (Stand im Git-Verlauf).
 
 **Noch offen:**
 - Die Showcase-Ansicht (`ruestungs-showcase.html`) fehlte im Zip. Schickt Max sie nach, lässt sich vergleichen, ob etwas fehlt.
@@ -255,7 +255,7 @@ Der Bereich Rüstung liegt auf `bereich/ruestung` (zweigt von `bereich/banner-sc
 cd companion/tests
 npm install                       # Playwright
 npx playwright install chromium   # einmalig, falls kein Chromium da ist (three.js für die 3D-Tests kommt mit npm install)
-npm test                          # biom-dekoder (18, node --test) + banner (44) + portale (29) + sammelobjekte (108) + kennbloecke (14) + karte (29) + board (57) + live (65) + anzeigeschema (28) + ruestung (64) + karte-mcworld (52) + anzeige-link (15) = 505 Prüfungen + 18 Tests
+npm test                          # biom-dekoder (node --test) + 16 Playwright-Dateien nacheinander; Stand und Zahlen je Datei: ../planung/UEBERGABE.md, Kapitel 6
 ```
 
 - `board.test.mjs`, `live.test.mjs` und `anzeigeschema.test.mjs` starten je ein **echtes Koordinaten-Board** (Ports 3198, 3195, 3194, eigener Datenordner); Anzeigeschema und Rüstung liefern die Companion zusätzlich selbst über http aus (3193, 3192). Board-Test: Companion über einen eigenen `http://localhost`-Server (DEMO) mit Kamera, Foto, Hand-Eingabe und „Aufs Board“. Vorher einmal `npm --prefix ../../koordinaten-board run installieren && npm --prefix ../../koordinaten-board run build` (die Anzeige braucht den gebauten Client).
@@ -306,7 +306,6 @@ companion/
 ├── companion-prototyp.html    ← der Prototyp (live vom Board ausgeliefert, sonst DEMO)
 ├── regeln.js                  ← Stammdaten + Regeln, lädt auch der Board-Server
 ├── board-karten.js            ← Anzeigeschemas (Daten → Karte), lädt auch der Board-Server
-├── entwuerfe/banner-ruestung.js   ← alter Entwurf, überholt (Banner + Rüstung sind eingebaut)
 ├── entwuerfe/handbuch-verzauberung.js ← Verzauberungen aus der Rüstung, warten aufs Handbuch
 ├── ruestungs-baukasten/       ← von Max: Bedrock-Texturen, manifest.json, baukasten.js, figur3d.js, LIESMICH.md
 │   ├── vorlagen/, zutaten/   Icons der Schmiedevorlagen und Besatz-Materialien
@@ -319,7 +318,7 @@ companion/
 │   ├── sammelobjekte/  Trails-&-Tales-Übersicht der Fundorte
 │   ├── banner/         Beispiel aus einem Banner-Editor
 │   └── ruestung/       3 Sets + 4 Verzauberungs-Reihenfolgen
-├── tests/              Playwright-Tests: Banner, Portale, Sammelobjekte, Kennblöcke, Board, Live-Betrieb, Anzeigeschema, Rüstung, Welt-Import, Anzeige-Link, Widgets
+├── tests/              Playwright-Tests: Banner, Portale, Sammelobjekte, Kennblöcke, Karte, Board, Live-Betrieb, getrennte Ursprünge, Netlify-Build, Anzeigeschema, Rüstung, Welt-Import, Anzeige-Link, Widgets
 └── widgets/            Widget-Ansicht fürs Board (Vite + React + TS, aus MainHub), Umbau laut ../planung/PLAN.md
 ```
 
