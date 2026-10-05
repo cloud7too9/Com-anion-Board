@@ -112,7 +112,7 @@ try {
   writeFileSync(swDatei, readFileSync(swDatei, "utf8").replace(/const STAND = "[^"]*"/, 'const STAND = "neuer-stand"'));   // wie ein neuer Build
   await p.evaluate(() => navigator.serviceWorker.getRegistration().then((r) => r.update()));
   pruefe(await warteAuf(p, () => !document.getElementById("aktualisierenBtn").hidden, null, 15000), "Neuer Service Worker übernommen → Knopf „Aktualisieren“");
-  await p.evaluate(() => alleSchliessen());   // das Welt-Sheet liegt über dem Knopf
+  await p.evaluate(() => alleSchliessen()); await schlafen(400);   // das Welt-Sheet liegt über dem Knopf
   await p.screenshot({ path: `${DIR}/n4-aktualisieren.png` });
   await Promise.all([p.waitForNavigation(), p.click("#aktualisierenBtn")]);
   pruefe(await warteAuf(p, () => document.querySelector("header") && document.getElementById("aktualisierenBtn").hidden, null, 10000), "Aktualisieren lädt die Seite neu, Knopf weg");
