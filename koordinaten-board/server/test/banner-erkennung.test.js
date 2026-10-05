@@ -1,9 +1,10 @@
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { bannerAuswerten, bannerAuslesen, schrittLesen } from '../src/banner-erkennung.js';
-import { screenshotAuslesen, erkennungBeenden } from '../src/erkennung.js';
+import { texterkennung } from '../src/texterkennung.js';
+
+// Dieselben Funktionen, die das Handy benutzt (companion/texterkennung.js), per node:vm geladen.
+// Die echte OCR am Referenzbild prüft seit Umbau Phase 3 der Playwright-Test companion/tests/live.test.mjs.
+const { bannerAuswerten, schrittLesen } = texterkennung;
 
 const zeilen = (...texte) => texte.map((text) => ({ text }));
 const REZEPT = [
@@ -42,14 +43,3 @@ test('Fehlende Grundfarbe, unklare Zeilen, keine Anleitung', () => {
   assert.equal(bannerAuswerten(zeilen('1 Black Base')), null);   // nur das Banner, kein Muster
   assert.equal(bannerAuswerten(zeilen('Dimension: Overworld', 'Stronghold (Stairway)', 'X: -1,884 Z: -524')), null);
 });
-
-test('Echter Screenshot: Anleitung wird erkannt, Seed-Map bleibt ein Ort', { timeout: 60_000 }, async () => {
-  const rezept = readFileSync(fileURLToPath(new URL('../../../referenz/banner/rezept-beispiel.jpg', import.meta.url)));
-  assert.equal((await screenshotAuslesen(rezept)).erkannt, null);
-  assert.deepEqual(await bannerAuslesen(rezept, 'image/jpeg'), { basis: 'black', ebenen: REZEPT, unklar: [] });
-  const seedmap = readFileSync(fileURLToPath(new URL('../../../referenz/seedmap/stronghold-popup.png', import.meta.url)));
-  assert.equal((await screenshotAuslesen(seedmap)).erkannt.name, 'Stronghold (Stairway)');
-  assert.equal(await bannerAuslesen(Buffer.from('kein Bild'), 'image/webp'), null);   // WebP wird nicht vorbereitet
-});
-
-after(() => erkennungBeenden());

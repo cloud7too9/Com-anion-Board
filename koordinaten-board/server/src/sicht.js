@@ -1,12 +1,12 @@
 // Was die Anzeige im Zimmer zeigt: die Orte der aktiven Welt in der Form, die
 // Anzeige.tsx kennt (client/src/lib/typen.ts → Ort). So bleibt die Anzeige
 // unabhängig vom Datenmodell der Companion. Biome sind keine Orte (sie kommen aus dem Welt-Import).
-import { FEATURES } from './erkennung.js';
+import { texterkennung } from './texterkennung.js';
 import { regeln } from './regeln.js';
 
 const DIMENSION = { overworld: 'oberwelt', nether: 'nether', end: 'ende' };
 // Seed-Map-Typ → Kategorie der Anzeige (Linien-Icon, Sortierung)
-const KATEGORIE = new Map(FEATURES.map((f) => [f.typ, f.kategorie]));
+const KATEGORIE = new Map(texterkennung.FEATURES.map((f) => [f.typ, f.kategorie]));
 
 export function anzeigeSicht(daten) {
   const welt = daten.aktiveWelt();
