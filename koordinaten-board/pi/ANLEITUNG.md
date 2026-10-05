@@ -83,8 +83,12 @@ Cloudflare flacht den CNAME auf `@` automatisch ab (CNAME flattening). Falls Net
 ```bash
 # cloudflared installieren (Debian/Raspberry Pi OS, arm64)
 curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
-echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
+# Cloudflare hat (Stand 10/2026) kein Verzeichnis für Debian 13 „trixie“ – deshalb fest „bookworm“, die Pakete sind dieselben
+echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared bookworm main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
 sudo apt-get update && sudo apt-get install -y cloudflared
+# Falls apt hakt: Paket direkt von GitHub (dann ohne Updates über apt)
+#   curl -fsSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
+#   sudo apt-get install -y /tmp/cloudflared.deb
 
 cloudflared tunnel login                           # öffnet eine Cloudflare-Seite (Link in der Konsole): Domain auswählen
 cloudflared tunnel create board                    # legt ~/.cloudflared/<TUNNEL-ID>.json an
