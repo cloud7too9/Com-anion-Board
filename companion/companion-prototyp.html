@@ -5353,6 +5353,17 @@ async function init(){
   if(!DEMO.enabled && !bd.verbindung) return boardSheetRendern();   // erst beitreten, dann Daten
   datenStarten();
 }
+/** Als PWA installierbar (Umbau Phase 5): nur, wenn konfig.js es sagt (Netlify) – Manifest einhängen, Service Worker starten.
+ *  Vom Board im Heimnetz (http) kommt die Seite weiter ohne Cache. */
+function pwaStarten(){
+  if(!window.COMPANION_KONFIG?.pwa) return;
+  for(const [rel, href] of [["manifest", "manifest.webmanifest"], ["apple-touch-icon", "icons/app/icon-180.png"]]){
+    const link = document.createElement("link"); link.rel = rel; link.href = href; document.head.appendChild(link);
+  }
+  if("serviceWorker" in navigator && (location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname)))
+    navigator.serviceWorker.register("sw.js").catch((f) => console.warn("Service Worker:", f.message));
+}
+pwaStarten();
 init();
 </script>
 </body>
