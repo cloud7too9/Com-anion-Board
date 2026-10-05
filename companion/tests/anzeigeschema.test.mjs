@@ -26,7 +26,7 @@ const schlafen = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const board = spawn(process.execPath, ["src/server.js"], {
   cwd: path.join(BOARD_ORDNER, "server"),
-  env: { ...process.env, PORT: String(PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten") },
+  env: { ...process.env, PORT: String(PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten"), ERLAUBTE_URSPRUENGE: "http://127.0.0.1:3193" },
   stdio: "ignore",
 });
 const companion = await companionAusliefern(3193);

@@ -113,27 +113,39 @@ const ident = identitaet({ daten, geheim: GEHEIM, boardPin: PIN });
 const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? 'warn' } });
 app.addHook('onRequest', async (req) => adresseLernen(req));
 
-// Die Companion-PWA läuft auf einem anderen Ursprung und tritt von dort bei.
-// Freigegeben sind nur die Pfade, die sie braucht – /api/anzeige (PIN!) bleibt zu.
-// Anmeldung per Bearer-Token, nicht per Cookie, deshalb reicht „*“.
-const FUER_COMPANION = ['/api/beitreten', '/api/beitreten/konten', '/api/ich'];
+// ---------- CORS (Umbau Phase 1): Seiten und API kommen künftig von verschiedenen Ursprüngen ----------
+// (Netlify ↔ api.<domain>). Für /api und /ws gelten nur Ursprünge aus ERLAUBTE_URSPRUENGE (kommagetrennt;
+// Standard: die Vite-Dev-Server von Anzeige und Dashboard) und der eigene Ursprung, solange der Server die
+// Seiten selbst ausliefert (Browser schicken Origin auch bei same-origin POST/PUT/DELETE). Anfragen ohne
+// Origin (curl, Node, Kamera-App) sind kein Browser-Ursprung und bleiben wie bisher.
+const ERLAUBTE_URSPRUENGE = new Set((process.env.ERLAUBTE_URSPRUENGE ?? 'http://localhost:5173,http://127.0.0.1:5173')
+  .split(',').map((u) => u.trim().replace(/\/$/, '')).filter(Boolean));
+function ursprungErlaubt(req) {
+  const origin = req.headers.origin;
+  if (ERLAUBTE_URSPRUENGE.has(origin)) return true;
+  try { return new URL(origin).host === req.headers.host; } catch { return false; }
+}
+const CORS_METHODEN = 'GET, POST, PUT, DELETE, OPTIONS';
 app.addHook('onRequest', async (req, reply) => {
-  if (!FUER_COMPANION.includes(req.url.split('?')[0])) return;
-  reply.header('Access-Control-Allow-Origin', '*');
+  const pfad = req.url.split('?')[0];
+  if (!(pfad === '/api' || pfad.startsWith('/api/') || pfad === '/ws')) return;
+  const origin = req.headers.origin;
+  if (!origin) return;
+  if (!ursprungErlaubt(req)) return reply.code(403).send({ fehler: 'Ursprung nicht erlaubt' });
+  reply.header('Access-Control-Allow-Origin', origin).header('Vary', 'Origin');
   // Chrome fragt vor Anfragen ins Heimnetz zusätzlich nach (Private Network Access)
   if (req.headers['access-control-request-private-network'] === 'true') {
     reply.header('Access-Control-Allow-Private-Network', 'true');
   }
 });
-for (const pfad of FUER_COMPANION) {
-  app.options(pfad, async (req, reply) =>
-    reply
-      .header('Access-Control-Allow-Methods', 'GET, POST')
-      .header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
-      .header('Access-Control-Max-Age', '600')
-      .code(204)
-      .send());
-}
+// Preflight für alle API-Pfade (auch PUT und DELETE); die Ursprungsprüfung macht der Hook oben
+app.options('/api/*', async (req, reply) =>
+  reply
+    .header('Access-Control-Allow-Methods', CORS_METHODEN)
+    .header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+    .header('Access-Control-Max-Age', '600')
+    .code(204)
+    .send());
 await app.register(fastifyMultipart, { limits: { fileSize: 25 * 1024 * 1024, files: 1 } });
 await app.register(fastifyWebsocket);
 // Leerer Rumpf bei „Content-Type: application/json“ (z. B. DELETE) ist kein Fehler

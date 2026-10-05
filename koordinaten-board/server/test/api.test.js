@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir, networkInterfaces } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { WebSocket as WsClient } from 'ws';   // kann Origin setzen (Abhängigkeit von @fastify/websocket)
 
 const PORT = 3297;
 const BASIS = `http://127.0.0.1:${PORT}`;
@@ -15,7 +16,7 @@ let server;
 async function starten() {
   server = spawn(process.execPath, ['src/server.js'], {
     cwd: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
-    env: { ...process.env, PORT: String(PORT), DATEN_ORDNER: ORDNER, RAUM_PIN: '4711' },
+    env: { ...process.env, PORT: String(PORT), DATEN_ORDNER: ORDNER, RAUM_PIN: '4711', ERLAUBTE_URSPRUENGE: 'https://board.beispiel.de, http://localhost:5173' },
     stdio: 'ignore',
   });
   for (let i = 0; i < 50; i += 1) {
@@ -303,6 +304,40 @@ test('Widget-Layout: Handy speichert, Anzeige liest ihres und meldet ihre Reihen
     const res = await fetch(`http://${AUSSEN}:${PORT}/api/anzeige/layout${new URL(tablet.link).search}`);
     assert.deepEqual((await res.json()).anzeige, { id: tablet.id, name: 'Tablet' });
   }
+});
+
+test('CORS: nur erlaubte Ursprünge und der eigene, alle Methoden, auch für /ws', async () => {
+  const mit = (origin, pfad = '/api/server', method = 'GET', extra = {}) =>
+    fetch(BASIS + pfad, { method, headers: { ...(origin && { origin }), ...extra } });
+  // Preflight mit erlaubtem Ursprung: 204, Methoden inklusive PUT und DELETE
+  let r = await mit('https://board.beispiel.de', '/api/orte/welten', 'OPTIONS', { 'access-control-request-method': 'PUT' });
+  assert.equal(r.status, 204);
+  assert.equal(r.headers.get('access-control-allow-origin'), 'https://board.beispiel.de');
+  assert.match(r.headers.get('access-control-allow-methods'), /PUT/);
+  assert.match(r.headers.get('access-control-allow-methods'), /DELETE/);
+  assert.equal(r.headers.get('vary'), 'Origin');
+  r = await mit('http://localhost:5173', '/api/anzeigen', 'OPTIONS', { 'access-control-request-method': 'DELETE' });
+  assert.equal(r.status, 204, 'zweiter Ursprung aus der Liste');
+  // Fremder Ursprung: 403, auch beim Preflight
+  assert.equal((await mit('https://fremd.de', '/api/orte/welten', 'OPTIONS', { 'access-control-request-method': 'PUT' })).status, 403);
+  r = await mit('https://fremd.de');
+  assert.deepEqual([r.status, (await r.json()).fehler, r.headers.get('access-control-allow-origin')], [403, 'Ursprung nicht erlaubt', null]);
+  // Eigener Ursprung (Seite kommt vom Server) immer, ohne Origin unverändert, außerhalb von /api egal
+  r = await mit(BASIS);
+  assert.deepEqual([r.status, r.headers.get('access-control-allow-origin')], [200, BASIS]);
+  assert.equal((await mit(null)).status, 200);
+  assert.equal((await mit('https://fremd.de', '/regeln.js')).status, 200, 'statische Dateien sind kein API-Pfad');
+  // WebSocket: Browser erzwingen bei /ws kein CORS, deshalb lehnt der Server fremde Ursprünge selbst ab
+  const max = await beitreten('Max');
+  const ws = (origin) => new Promise((ok) => {
+    const s = new WsClient(`ws://127.0.0.1:${PORT}/ws?token=${encodeURIComponent(max)}`, { headers: { origin } });
+    s.once('open', () => { s.close(); ok('offen'); });
+    s.once('unexpected-response', (_, res) => { ok(`abgelehnt ${res.statusCode}`); });
+    s.once('error', () => ok('fehler'));
+  });
+  assert.equal(await ws('https://fremd.de'), 'abgelehnt 403');
+  assert.equal(await ws('https://board.beispiel.de'), 'offen');
+  assert.equal(await ws(BASIS), 'offen', 'eigener Ursprung');
 });
 
 test('PIN-Sperre hinter dem Tunnel: CF-Connecting-IP von loopback zählt als Adresse, je Adresse eigene Sperre', async () => {

@@ -32,7 +32,8 @@ let board = null;
 async function boardStarten() {
   board = spawn(process.execPath, ["src/server.js"], {
     cwd: path.join(HIER, "../../koordinaten-board/server"),
-    env: { ...process.env, PORT: String(BOARD_PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten") },
+    env: { ...process.env, PORT: String(BOARD_PORT), RAUM_PIN: PIN, DATEN_ORDNER: path.join(TMP, "daten"),
+           ERLAUBTE_URSPRUENGE: `http://localhost:${SEITE_PORT}` },   // die Seite kommt von einem anderen Ursprung (CORS)
     stdio: "ignore",
   });
   for (let i = 0; i < 60; i++) {
