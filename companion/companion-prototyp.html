@@ -1237,6 +1237,7 @@ button.switch { padding:0; }
   <div class="orte-toast chip" id="orteToast" hidden></div>
 </div>
 
+<script src="konfig.js"></script>
 <script src="regeln.js"></script>
 <script src="board-karten.js"></script>
 <script src="biom-ids.js"></script>
@@ -1501,7 +1502,9 @@ const DEMO = {
   // Mock, bis init() das Board als Server erkannt hat (betriebErkennen)
   enabled: true,
 };
-const API_BASIS = "/api";
+/** Adresse des Boards (API und WebSocket): aus konfig.js (Netlify, Umbau Phase 2), sonst der Server dieser Seite */
+const BOARD_ADRESSE = String(window.COMPANION_KONFIG?.apiAdresse || "").replace(/\/+$/, "") || location.origin;
+const API_BASIS = `${BOARD_ADRESSE}/api`;
 /** Live-Betrieb, wenn das Board diese Seite ausliefert – sonst (Datei, fremder Server, ?demo=1) der Mock */
 async function betriebErkennen(){
   if(!location.protocol.startsWith("http") || new URLSearchParams(location.search).get("demo") === "1") return false;
@@ -3642,7 +3645,7 @@ document.getElementById("portalWeltBtn").addEventListener("click", () => weltOef
    Das Board ist ein eigenes Gerät: Die Verbindung ist auch im DEMO-Modus echt.
    Sie gilt nur für dieses Gerät (localStorage „board.verbindung“, „board.name“).
    Live-Betrieb (das Board liefert diese Seite aus): Beitreten ist die Anmeldung
-   für alle Daten. Das Board ist dann immer location.origin – ohne Scanner, die
+   für alle Daten. Das Board ist dann immer BOARD_ADRESSE (konfig.js, sonst location.origin) – ohne Scanner, die
    PIN kommt aus dem QR-Code (?pin=…), den die Kamera-App geöffnet hat.
 
    „Aufs Board“ (Inhalte auf die Anzeige werfen), über dieselbe Verbindung:
@@ -4198,17 +4201,17 @@ function boardSheetRendern(){
   const name = lsLesen("board.name") || (DEMO.enabled ? MOCK.ich : "");
   if(!DEMO.enabled){
     const pin = new URLSearchParams(location.search).get("pin") || "";
-    sheetOeffnen("board", kopfHtml("Beitreten", `Koordinaten-Board · ${esc(adresseKurz(location.origin))}`) + `<div class="orte-inhalt">
+    sheetOeffnen("board", kopfHtml("Beitreten", `Koordinaten-Board · ${esc(adresseKurz(BOARD_ADRESSE))}`) + `<div class="orte-inhalt">
       <div class="banner info">Alle im Raum sehen dieselben Orte, Sammelobjekte, Portale und Banner. Die PIN steht auf der Anzeige unter dem QR-Code.</div>
       <div class="banner" id="boardBanner" hidden></div>
-      <input type="hidden" id="boardAdresse" value="${esc(location.origin)}">
+      <input type="hidden" id="boardAdresse" value="${esc(BOARD_ADRESSE)}">
       <div class="field-group"><div class="field-group-label">PIN</div>
         <input class="orte-eingabe mono" id="boardPin" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="123456" value="${esc(pin)}"></div>
       ${boardKontoHtml(name)}
       <div class="sheet-fuss"><button class="btn-primary" data-aktion="board-beitreten">Beitreten</button></div>
     </div>`);
     document.getElementById(pin ? "boardName" : "boardPin").focus();
-    if(/^\d{6,}$/.test(pin)) boardKontenLaden(location.origin, pin);
+    if(/^\d{6,}$/.test(pin)) boardKontenLaden(BOARD_ADRESSE, pin);
     boardKontoHinweis();
     return;
   }
@@ -5279,7 +5282,7 @@ $sheet.addEventListener("input", (e) => {
     t.value = t.value.replace(/\D/g, "").slice(0, 8);
     // Mit vollständiger Board-PIN (mindestens 6 Ziffern) die Accounts zum Auswählen holen – kurz warten,
     // falls die PIN länger ist, sonst zählte jede Zwischenstufe als Fehlversuch (Sperre)
-    const adresse = DEMO.enabled ? (boardQrLesen(document.getElementById("boardAdresse").value)?.adresse || boardAdresseLesen(document.getElementById("boardAdresse").value)) : location.origin;
+    const adresse = DEMO.enabled ? (boardQrLesen(document.getElementById("boardAdresse").value)?.adresse || boardAdresseLesen(document.getElementById("boardAdresse").value)) : BOARD_ADRESSE;
     clearTimeout(boardPinTimer);
     if(t.value.length >= 6 && adresse) boardPinTimer = setTimeout(() => boardKontenLaden(adresse, t.value), 500);
     return;
@@ -5331,8 +5334,8 @@ async function init(){
   uhr(); setInterval(uhr, 30000);
   DEMO.enabled = !(await betriebErkennen());
   if(!DEMO.enabled){
-    // Live: Das Board ist dieser Server – eine Verbindung zu einem anderen gilt hier nicht
-    if(bd.verbindung && bd.verbindung.adresse !== location.origin) bd.verbindung = null;
+    // Live: Das Board ist BOARD_ADRESSE – eine Verbindung zu einem anderen gilt hier nicht
+    if(bd.verbindung && bd.verbindung.adresse !== BOARD_ADRESSE) bd.verbindung = null;
     renderStatus();
   }
   boardKnopfRendern();

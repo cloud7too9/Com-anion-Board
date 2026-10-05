@@ -136,8 +136,8 @@ test('Welt-Import: Biome hochladen (auch über 1 MB), lesen, ersetzen, löschen'
   ws.close();
 });
 
-test('Welt-Import: Worker, Dekoder und Bibliothek werden als JavaScript ausgeliefert', async () => {
-  for (const pfad of ['/biom-import.worker.js', '/biom-welt.js', '/biom-dekoder.js', '/biom-ids.js', '/vendor/mcbe-leveldb.js']) {
+test('Companion-Dateien: konfig.js, Regeln, Karten, Welt-Import-Worker und Bibliothek werden als JavaScript ausgeliefert', async () => {
+  for (const pfad of ['/konfig.js', '/regeln.js', '/board-karten.js', '/biom-import.worker.js', '/biom-welt.js', '/biom-dekoder.js', '/biom-ids.js', '/vendor/mcbe-leveldb.js']) {
     const res = await fetch(BASIS + pfad);
     assert.equal(res.status, 200, pfad);
     assert.ok(res.headers.get('content-type').startsWith('application/javascript'), `${pfad}: ${res.headers.get('content-type')}`);
