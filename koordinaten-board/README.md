@@ -123,7 +123,8 @@ Alles liegt in `server/daten/`:
 | `ERLAUBTE_URSPRUENGE` | `http://localhost:5173,http://127.0.0.1:5173` | Ursprünge (kommagetrennt), die `/api` und `/ws` aus dem Browser nutzen dürfen, z. B. später `https://deinedomain.de`. Der eigene Ursprung des Servers gilt immer |
 | `HOST` | `0.0.0.0` | Lausch-Adresse. Im Heimnetz bleibt `0.0.0.0` (Handys im WLAN); auf dem Pi hinter `cloudflared` `127.0.0.1`, dann erreicht den Server nur der Tunnel |
 | `RAUM_PIN` | zufällig, in `pin.txt` | feste Board-PIN setzen, mindestens 6 Ziffern (sonst startet der Server nicht) |
-| `OEFFENTLICHE_URL` | automatisch | Adresse im QR-Code, falls die automatische LAN-IP falsch ist |
+| `OEFFENTLICHE_URL` | automatisch | Adresse im QR-Code und im Anzeige-Link, falls die automatische LAN-IP falsch ist; auf dem Pi die Netlify-Adresse (`https://deinedomain.de`) |
+| `COMPANION_PFAD` | `/` | Pfad der Companion unter dieser Adresse: lokal `/`, auf Netlify `/app/` (Umbau Phase 5) |
 | `DATEN_ORDNER` | `server/daten` | Speicherort |
 | `COMPANION_ORDNER` | `../companion` | Ordner mit Companion-Seite, `regeln.js`, `icons/`, `ruestungs-baukasten/` und den Dateien des Welt-Imports (`biom-*.js`, `vendor/`) |
 | `COMPANION_DATEI` | `companion-prototyp.html` | Seite, die unter `/` ausgeliefert wird (später z. B. `modul-a-live-karte.html`) |

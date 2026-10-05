@@ -22,6 +22,8 @@ const PORT = Number(process.env.PORT ?? 3000);
 // Lausch-Adresse: 0.0.0.0 fürs Heimnetz (Handys im WLAN). Auf dem Pi hinter cloudflared HOST=127.0.0.1,
 // dann erreicht den Server nur noch der Tunnel (Umbau Phase 6).
 const HOST = process.env.HOST ?? '0.0.0.0';
+// Pfad der Companion unter OEFFENTLICHE_URL (Umbau Phase 5): lokal liefert der Server sie unter / aus, auf Netlify liegt sie unter /app/
+const COMPANION_PFAD = `/${(process.env.COMPANION_PFAD ?? '/').replace(/^\/+|\/+$/g, '')}/`.replace('//', '/');
 const DATEN = path.resolve(process.env.DATEN_ORDNER ?? path.join(HIER, '..', 'daten'));
 const CLIENT_DIST = path.resolve(HIER, '..', '..', 'client', 'dist');
 // Widget-Dashboard (companion/widgets, `npm run build` → dist/), ausgeliefert unter /dashboard
@@ -202,7 +204,7 @@ app.get('/api/anzeige', async (req, reply) => {
   if (!zugang.erlaubt) return reply.code(403).send({ fehler: 'Anzeige nur mit Anzeige-Link' });
   return {
     anzeige: zugang.anzeige && { id: zugang.anzeige.id, name: zugang.anzeige.name },
-    beitrittsUrl: `${lanAdresse()}/?pin=${PIN}`,
+    beitrittsUrl: `${lanAdresse()}${COMPANION_PFAD}?pin=${PIN}`,
     adresse: lanAdresse(),
     pin: PIN,
     // Falls der QR-Code nicht klappt: andere Adressen dieses Geräts zum Ausprobieren
@@ -424,7 +426,7 @@ function anzeigeLinkMerken() {
 await app.listen({ port: PORT, host: HOST });
 anzeigeLinkMerken();
 console.log(`\n  Koordinaten-Board läuft (lauscht auf ${HOST}:${PORT})`);
-console.log(`  Companion (Handys):      ${lanAdresse()}   PIN ${PIN}`);
+console.log(`  Companion (Handys):      ${lanAdresse()}${COMPANION_PFAD === '/' ? '' : COMPANION_PFAD}   PIN ${PIN}`);
 const anzeigen = daten.anzeigenListe();
 for (const a of anzeigen) {
   console.log(`  Anzeige${anzeigen.length > 1 ? ` „${a.name}“` : ''}: ${anzeigeLink(a)}`);
