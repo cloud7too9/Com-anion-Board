@@ -1,6 +1,6 @@
 /* biom-ids.js – erzeugt von companion/tools/biom-ids-bauen.mjs, nicht von Hand ändern.
-   Biom-IDs, wie Bedrock sie in Data3D speichert. Quelle: minecraft-data 3.117.0, bedrock/1.20.0/biomes.json
-   + 1 an echten Welten bestätigte Nachträge.
+   Biom-IDs, wie Bedrock sie in Data3D speichert. IDs: Mojang bedrock-samples 1.26.50.4 (tools/mojang-biomes.json);
+   Anzeigename und Farbe: minecraft-data 3.117.0, bedrock/1.20.0/biomes.json, 4 neuere Biome ergänzt.
    displayName entspricht der Schreibweise von Chunkbase und der Biom-Liste in regeln.js.
    Klassisches Script: Seite (<script src>), Worker und Node (import "./biom-ids.js") lesen globalThis.BIOM_IDS. */
 globalThis.BIOM_IDS = Object.freeze([
@@ -89,5 +89,8 @@ globalThis.BIOM_IDS = Object.freeze([
   { id:189, name:"stony_peaks", displayName:"Stony Peaks", color:"#d1d1d1" },
   { id:190, name:"deep_dark", displayName:"Deep Dark", color:"#1d2b33" },
   { id:191, name:"mangrove_swamp", displayName:"Mangrove Swamp", color:"#4f6b3a" },
+  { id:192, name:"cherry_grove", displayName:"Cherry Grove", color:"#f2a7c4" },
+  { id:193, name:"pale_garden", displayName:"Pale Garden", color:"#8f9a8d" },
+  { id:194, name:"sulfur_caves", displayName:"Sulfur Caves", color:"#d4b52e" },
   { id:195, name:"dappled_forest", displayName:"Dappled Forest", color:"#c96a2b" },
 ].map(Object.freeze));

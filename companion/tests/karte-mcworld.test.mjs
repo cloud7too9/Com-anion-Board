@@ -144,7 +144,7 @@ try {
   s = await sheet(p);
   pruefe(s.includes("1 305 Chunks") && s.includes("Oberwelt1 279 Chunks") && s.includes("Nether24 Chunks") && s.includes("End2 Chunks"),
     "Prüfliste: Chunks je Dimension");
-  pruefe(s.includes("Unbekannte Biom-IDs") && s.includes("192 · 3 Chunks, z. B. Oberwelt X 488 Z 8"), "Unbekannte ID mit Beispielkoordinate");
+  pruefe(s.includes("Unbekannte Biom-IDs") && s.includes("250 · 3 Chunks, z. B. Oberwelt X 488 Z 8"), "Unbekannte ID mit Beispielkoordinate");
   pruefe(s.includes("Ersetzt den Import vom 28.9.2026"), "Hinweis: ersetzt den alten Import");
   const vorschau = await p.$eval(".wi-vorschau", (i) => [i.naturalWidth, i.naturalHeight]);
   pruefe(vorschau[0] === 80 && vorschau[1] === 16, `Vorschau 1 Pixel je erkundetem Chunk (${vorschau.join(" × ")}: cx −40…39, cz −8…7)`);
@@ -160,7 +160,7 @@ try {
     pilz: biomAnStelle("overworld", 24, 24)?.name, fluss: biomAnStelle("overworld", 40, 40)?.name, alt: biomAnStelle("overworld", 2000, 2000),
     unbekannt: biomAnStelle("overworld", 488, 8), weltname: bm.import.weltname, von: bm.import.von, mock: MOCK.biome.w_1.kacheln.length }));
   pruefe(nachher.toast === "Biome übernommen · 1 305 Chunks", `Toast: ${nachher.toast}`);
-  pruefe(nachher.pilz === "Mushroom Fields" && nachher.fluss === "River" && nachher.alt === null && nachher.unbekannt?.unbekannt === 192,
+  pruefe(nachher.pilz === "Mushroom Fields" && nachher.fluss === "River" && nachher.alt === null && nachher.unbekannt?.unbekannt === 250,
     "Neue Biome auf der Karte, alte ersetzt, unbekannte ID bleibt unbekannt");
   pruefe(nachher.weltname === "Unsere Welt" && nachher.von === "Max" && nachher.mock === 13, `Import im Mock gespeichert (${nachher.mock} Kacheln: 8 Oberwelt, 4 Nether, 1 End)`);
   await p.evaluate(() => karte.zentrieren(0, 0)); await schlafen(200);
