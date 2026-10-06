@@ -376,9 +376,15 @@ body {
   transition:transform .3s cubic-bezier(.22,.61,.36,1), background .45s ease;
   display:flex; flex-direction:column; padding-top: env(safe-area-inset-top); }
 .sidebar.open { transform:translateX(0); box-shadow:24px 0 60px rgba(0,0,0,.5); }
-.sb-head { padding:24px 22px 18px; border-bottom:1px solid var(--border-soft); }
-.sb-head .kicker { font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--text-faint); font-weight:700; }
-.sb-head .name { font-size:19px; font-weight:800; margin-top:3px; }
+/* Spielerprofil ganz oben (Max, 05.10.2026): Name, dazu ein Platzhalter für Profilbild oder Skin */
+.sb-profil { display:flex; align-items:center; gap:14px; padding:22px 18px 18px; border-bottom:1px solid var(--border-soft); }
+.sb-profil .bild { width:54px; height:54px; border-radius:50%; flex:0 0 auto; display:grid; place-items:center; overflow:hidden;
+  background:var(--surface-2); border:1px solid var(--border-soft); color:var(--text-faint); }
+.sb-profil .bild svg { width:30px; height:30px; }
+.sb-profil .text { min-width:0; display:flex; flex-direction:column; }
+.sb-profil .kicker { font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--text-faint); font-weight:700; }
+.sb-profil .name { font-size:19px; font-weight:800; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sb-profil .card-meta { margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .sb-nav { padding:12px; display:flex; flex-direction:column; gap:4px; }
 .nav-item { display:flex; align-items:center; gap:13px; padding:14px 14px; border-radius:14px;
   background:transparent; border:none; color:var(--text-dim); cursor:pointer; text-align:left; font-size:15.5px; font-weight:600; }
@@ -1035,6 +1041,10 @@ button.switch { padding:0; }
   z-index:30; font-size:13px; font-weight:600; white-space:nowrap; max-width:calc(100% - 32px); overflow:hidden; text-overflow:ellipsis; }
 .orte-toast[hidden] { display:none; }
 .orte-toast.fehler { color:#ff8278; border-color:rgba(232,68,60,.5); }
+/* Neue Version der App geholt (PWA): Knopf über der Bottom-Bar, bleibt bis zum Antippen; ein offenes Sheet liegt darüber */
+.aktualisieren { position:absolute; left:50%; bottom:calc(134px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:19;
+  font-size:13px; font-weight:700; white-space:nowrap; cursor:pointer; color:var(--accent); border-color:var(--accent); }
+.aktualisieren[hidden] { display:none; }
 </style>
 </head>
 <body>
@@ -1215,10 +1225,8 @@ button.switch { padding:0; }
   <!-- EBENE 1 · Sidebar – wird aus BEREICHE gebaut -->
   <div class="scrim" id="scrim"></div>
   <aside class="sidebar" id="sidebar">
-    <div class="sb-head">
-      <div class="kicker">Minecraft</div>
-      <div class="name">Companion</div>
-    </div>
+    <!-- Spielerprofil (Max, 05.10.2026): Name + Platzhalter für Bild/Skin – wird aus profilKarteRendern() gebaut -->
+    <div class="sb-profil" id="sbProfil"></div>
     <nav class="sb-nav" id="sbNav"></nav>
     <!-- Verbindung zum Koordinaten-Board im Zimmer (kein Bereich, gilt fürs Gerät) -->
     <div class="sb-fuss">
@@ -1235,6 +1243,8 @@ button.switch { padding:0; }
   </section>
 
   <div class="orte-toast chip" id="orteToast" hidden></div>
+  <!-- PWA: eine neue Version liegt im Cache – neu laden, damit die Seite sie nutzt -->
+  <button class="chip aktualisieren" id="aktualisierenBtn" hidden>Neue Version · Aktualisieren</button>
 </div>
 
 <script src="konfig.js"></script>
@@ -2825,6 +2835,20 @@ function weltKnopfRendern(){
   $k.innerHTML = `<span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
     <span class="text"><span class="titel">Welt</span><span class="card-meta">${st.welt ? `Seed ${esc(kurzSeed(st.welt.seed))} · ${biome ? "Biome importiert" : "ohne Biome"}` : "Noch keine Welt"}</span></span>`;
 }
+/** Spielerprofil oben in der Sidebar (Max, 05.10.2026): Name und ein Platzhalter für Profilbild oder Skin (kommt später).
+    Name: live der Account vom Board (bd.ich, sonst der Name der Verbindung), im DEMO-Modus MOCK.ich. */
+const PROFIL_PLATZHALTER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>';
+function profilName(){
+  if(bd.verbindung) return bd.ich?.anzeigename || bd.verbindung.name || "";
+  return DEMO.enabled ? MOCK.ich : "";
+}
+function profilKarteRendern(){
+  const $p = document.getElementById("sbProfil"); if(!$p) return;
+  const name = profilName();
+  $p.innerHTML = `<span class="bild" aria-hidden="true">${PROFIL_PLATZHALTER}</span>
+    <span class="text"><span class="kicker">Spieler</span><span class="name">${name ? esc(name) : "Nicht angemeldet"}</span>
+      <span class="card-meta">${name ? (bd.verbindung ? "Account auf dem Board" : "Demo-Modus") : "Beitreten unter „Board“"}</span></span>`;
+}
 function sidebarBauen(aktiv){
   document.getElementById("sbNav").innerHTML = BEREICHE.map((b) => {
     const da = typeof b.mount === "function";
@@ -4087,6 +4111,7 @@ function boardKnopfRendern(){
 }
 function boardAnzeigen(){
   boardKnopfRendern();
+  profilKarteRendern();
   samFussRendern();
   boardZeigenKnoepfe();
   // Formular nicht neu zeichnen (Eingaben blieben sonst nicht stehen) – nur die Status-Ansicht,
@@ -5331,6 +5356,7 @@ function uhr(){ document.getElementById("uhr").textContent = new Date().toLocale
 async function datenStarten(){
   // Live: Gilt das Token noch? Tokens von vor den Accounts nicht – dann öffnet api() das Beitreten
   if(!DEMO.enabled && !(bd.ich = await IDENTITAET.werBistDu())) return;
+  profilKarteRendern();
   if(!(await weltenLaden())) return;
   const start = new URLSearchParams(location.search).get("modul");
   if(start && start !== "karte") modulWechseln(start);
@@ -5349,6 +5375,7 @@ async function init(){
     renderStatus();
   }
   boardKnopfRendern();
+  profilKarteRendern();
   if(bd.verbindung) boardVerbinden();
   if(!DEMO.enabled && !bd.verbindung) return boardSheetRendern();   // erst beitreten, dann Daten
   datenStarten();
@@ -5361,8 +5388,20 @@ function pwaStarten(){
     const link = document.createElement("link"); link.rel = rel; link.href = href; document.head.appendChild(link);
   }
   if("serviceWorker" in navigator && (location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname)))
-    navigator.serviceWorker.register("sw.js").catch((f) => console.warn("Service Worker:", f.message));
+    navigator.serviceWorker.register("sw.js").then(aktualisierenEinrichten).catch((f) => console.warn("Service Worker:", f.message));
 }
+/** Neue Version (Max, 05.10.2026): Der neue Service Worker übernimmt sofort (skipWaiting + claim) und hat die neuen Dateien im
+ *  Cache, die offene Seite läuft aber noch mit dem alten Stand. Dann erscheint der Knopf „Aktualisieren“, der die Seite neu lädt.
+ *  Beim Zurückkehren in die App sieht der Browser nach, ob es eine neue Version gibt (sonst nur beim Öffnen und alle 24 h). */
+function aktualisierenEinrichten(reg){
+  let hatteController = Boolean(navigator.serviceWorker.controller);   // beim allerersten Installieren noch keiner → kein Knopf
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if(hatteController) document.getElementById("aktualisierenBtn").hidden = false;
+    hatteController = true;
+  });
+  document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") reg.update().catch(() => {}); });
+}
+document.getElementById("aktualisierenBtn").addEventListener("click", () => location.reload());
 pwaStarten();
 init();
 </script>

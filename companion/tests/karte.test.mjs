@@ -103,6 +103,7 @@ await p.click('#orteSheetInhalt [data-aktion="schliessen"]'); await warte();
 
 // ---- Sidebar: Welt mit Welt-Import ----------------------------------------------------------
 await p.click("#burgerBtn"); await warte();
+pruefe((await text("#sbProfil")).includes("Max") && (await text("#sbProfil")).includes("Demo-Modus") && await p.$("#sbProfil .bild svg"), `Sidebar: Spielerprofil oben mit Platzhalter-Bild (${await text("#sbProfil")})`);
 pruefe((await text("#weltKnopf")).includes("Welt") && (await text("#weltKnopf")).includes("Biome importiert"), `Sidebar: ${await text("#weltKnopf")}`);
 await p.screenshot({ path: `${DIR}/c4-sidebar-welt.png` });
 await p.click("#weltKnopf"); await warte();

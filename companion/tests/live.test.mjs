@@ -100,6 +100,7 @@ try {
   await max.click('[data-aktion="welt-anlegen"]');
   pruefe(await warteAuf(max, () => st.weltId && st.welten.length === 1), "Welt angelegt");
   pruefe((await text(max, "#boardBtn")).includes("Verbunden"), "Sidebar: mit dem Board verbunden");
+  pruefe((await text(max, "#sbProfil")).includes("Max") && (await text(max, "#sbProfil")).includes("Account auf dem Board"), `Sidebar: Spielerprofil oben (${await text(max, "#sbProfil")})`);
 
   // Ort von Hand eintragen
   await max.click("#orteEintragenBtn"); await max.click('[data-aktion="eintragen-hand"]'); await max.waitForSelector("#formNeu");
