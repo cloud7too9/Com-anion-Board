@@ -36,7 +36,7 @@
 | #9 | Biom-IDs vollständig aus Mojangs `mojang-biomes.json` (Cherry Grove 192, Pale Garden 193, Sulfur Caves 194) |
 | #10 | Companion: Spielerprofil oben in der Sidebar (Name + Platzhalter), Knopf „Neue Version · Aktualisieren“ als PWA |
 
-Neu auf der Warteliste: H7 (Farben der neuen Biome), H8 (Probe bei Netlify), N6 („Aktualisieren“ auch bei neuen Daten?), E17 (Inhalt des Spielerprofils), E18 (Heimnetz-Betrieb vom Laptop behalten?), Kapitel 5 (Branches löschen).
+Neu auf der Warteliste: H7 (Farben der neuen Biome), H8 (Probe bei Netlify), N6 („Aktualisieren“ auch bei neuen Daten?), E17 (Inhalt des Spielerprofils), E18 (Heimnetz-Betrieb vom Laptop behalten?), E19 (Sammelobjekt-Karten mit Struktur-Ansicht, Besatz-Icon und Biom-Hintergrund; Max liefert die Ansichten), Kapitel 5 (Branches löschen).
 
 ### Vorige Runde (04.10.2026)
 
