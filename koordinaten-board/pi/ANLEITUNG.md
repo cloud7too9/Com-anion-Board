@@ -19,7 +19,7 @@ Der Code für die Phasen 1 bis 5 ist fertig und lokal geprüft. Ab hier braucht 
 
 ## 1. Netlify
 
-1. Bei [netlify.com](https://www.netlify.com) anmelden (GitHub-Login reicht) → *Add new site → Import an existing project* → GitHub → `cloud7too9/Com-anion-Board`, Branch `main`. Build-Befehl und Ordner kommen aus `netlify.toml`, nichts eintragen.
+1. Bei [netlify.com](https://www.netlify.com) anmelden (GitHub-Login reicht) → *Add new site → Import an existing project* → GitHub → `cloud7too9/Companion-Board`, Branch `main`. Build-Befehl und Ordner kommen aus `netlify.toml`, nichts eintragen.
 2. *Site configuration → Environment variables*: `API_URL` erst einmal leer lassen oder weglassen. Die Seite läuft dann im DEMO-/Beispiel-Modus: gut zum Anschauen von `/`, `/app/` und `/dashboard/` unter `https://<name>.netlify.app`.
 3. Nach Schritt 4 (Tunnel): `API_URL = https://api.deinedomain.de` setzen, *Deploys → Trigger deploy*.
 4. Domain: *Domain management → Add a domain* → `deinedomain.de` und `www.deinedomain.de`. Netlify nennt dann die DNS-Einträge (siehe Cloudflare, Abschnitt 3). Das Zertifikat stellt Netlify selbst aus, sobald die Einträge stimmen (dauert bis zu einer Stunde).
@@ -39,7 +39,7 @@ sudo mkdir -p /opt/companion-board /var/lib/companion-board
 sudo chown -R board:board /opt/companion-board /var/lib/companion-board
 
 # Repo und API (nur der Server, keine Seiten, keine Texterkennung)
-sudo -u board git clone https://github.com/cloud7too9/Com-anion-Board.git /opt/companion-board
+sudo -u board git clone https://github.com/cloud7too9/Companion-Board.git /opt/companion-board
 cd /opt/companion-board/koordinaten-board/server && sudo -u board npm ci --omit=dev
 
 # Dienst

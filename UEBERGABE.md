@@ -2,7 +2,7 @@
 
 Stand: 05.10.2026 · Einstieg für einen neuen Chat
 
-> **Repo-Umzug (05.10.2026):** Dieses Repo `Com-anion-Board` hat mit dem Stand von `flexibel-visionboard` (`main` 9d5be46) als einem Start-Commit begonnen. Der alte Verlauf, die alten Branches und die alten PR-Nummern liegen weiter in [`flexibel-visionboard`](https://github.com/cloud7too9/flexibel-visionboard). Mitgenommen wurde nur `bereich/karte-mcworld` als eigener Stand ohne Eltern (nicht mergen, nur nachschlagen).
+> **Repo-Umzug (05.10.2026):** Dieses Repo `Companion-Board` hat mit dem Stand von `flexibel-visionboard` (`main` 9d5be46) als einem Start-Commit begonnen. Der alte Verlauf, die alten Branches und die alten PR-Nummern liegen weiter in [`flexibel-visionboard`](https://github.com/cloud7too9/flexibel-visionboard). Mitgenommen wurde nur `bereich/karte-mcworld` als eigener Stand ohne Eltern (nicht mergen, nur nachschlagen).
 >
 > **Umbau auf Netlify + Raspberry Pi:** Plan und Haken in [`planung/UMBAUPLAN.md`](planung/UMBAUPLAN.md), Stand der Phasen in [`planung/UEBERGABE.md`](planung/UEBERGABE.md). Phasen 1–5 sind gebaut; was Max für Netlify, Cloudflare und den Pi tun muss, steht in [`koordinaten-board/pi/ANLEITUNG.md`](koordinaten-board/pi/ANLEITUNG.md).
 
@@ -30,7 +30,7 @@ Geht es ums Raum-Board, statt der Companion-Übergabe `koordinaten-board/UEBERGA
 
 Geht es mit dem Umbau weiter (Netlify, Pi, Tunnel), zum Beispiel:
 
-> Lies `UEBERGABE.md`, danach `planung/UMBAUPLAN.md` und `planung/UEBERGABE.md`. Mach mit Phase 2 (API-Adresse konfigurierbar) weiter.
+> Lies `UEBERGABE.md`, danach `planung/UMBAUPLAN.md` und `planung/UEBERGABE.md`. Phasen 1–5 sind gebaut; ich habe Netlify/Pi nach `koordinaten-board/pi/ANLEITUNG.md` eingerichtet, hier das Ergebnis der Probe: …
 
 Geht es mit dem Plan weiter (Widget-Dashboard, Offline, Accounts), zum Beispiel:
 
@@ -88,7 +88,7 @@ Was wohin gehört:
 | Zweck | Die App am Handy: Karte, Sammelobjekte, Portale, Banner, Rüstung, später Handbuch, Baupläne | **Server der Companion** (Daten, Live-Sync) und Anzeige im Zimmer |
 | Technik | eine HTML-Seite + `regeln.js`, Vanilla JS, kein Build; live vom Board ausgeliefert, sonst DEMO-Mock | Fastify 5, Vite + React 19 + TypeScript (nur Anzeige), SQLite (`node:sqlite`, seit Umbau Phase 4) |
 | Stand | 5 von 7 Bereichen umgesetzt, Handbuch und Baupläne offen; Welt-Import; nur Bedrock | Server der Companion; Widget-Dashboard unter `/dashboard` (A0–A6); Accounts mit PIN (B1, B2) |
-| Tests | Playwright: 15 Dateien mit 598 Prüfungen, dazu 20 Dekoder-Tests (`companion/tests`); Widgets: 108 Unit-Tests | `node --test`: 57 Tests (Daten, API, Regeln, Erkennung, Karten, Identität …) |
+| Tests | Playwright: 16 Dateien, dazu 20 Dekoder-Tests (`companion/tests`); Widgets: 110 Unit-Tests | `node --test`: 59 Tests (Daten, API, Regeln, Auswertung der Texterkennung, Karten, Identität …) |
 | CI | alle Tests bei jedem PR und Push auf `main` (`.github/workflows/tests.yml`) | ← dieselbe CI |
 
 ---
@@ -130,7 +130,7 @@ Daten: koordinaten-board/server/daten/daten.db (SQLite; daten.json bleibt als Si
   - DATABASE: World (id, seed) → Dimension (overworld/nether/end) → FeatureInstance (x, y?, z)
   - STATIC: Biome, Group, FeatureCategory, FeatureType
   - Der Board-Server speichert danach (`daten.js`), mit den Erweiterungen am Ende der Datei. Die Anzeige bekommt davon ihre einfache `Ort`-Form (`sicht.js` → `client/src/lib/typen.ts`).
-- `seedmap/`: Chunkbase-Screenshots (Oberwelt, Nether, End, Feature-Liste, Stronghold-Popup). Grundlage für die OCR des Boards und den Screenshot-Import der Companion.
+- `seedmap/`: Chunkbase-Screenshots (Oberwelt, Nether, End, Feature-Liste, Stronghold-Popup). Grundlage für die Texterkennung der Companion (seit Umbau Phase 3 am Handy).
 - `banner/rezept-beispiel.jpg`: Banner-Anleitung von Max (Schritte „Black Base“ … „Black Base Sinister Canton“). Grundlage und Testbild für die Banner-Erkennung.
 - `dashboard/`: iOS-Kontrollzentrum als Vorbild für die Dashboard-Ansichten.
 
